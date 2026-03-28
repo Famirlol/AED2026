@@ -1,0 +1,131 @@
+#include <iostream>
+using namespace std;
+
+template<class T, int n = 10>
+struct co {
+    int num_e;
+    T* arr;
+    T* head;
+    T* co;
+
+    co();
+    ~co();
+    bool vacio();
+    bool lleno();
+    bool push(T val);
+    bool pop(T& val);
+};
+
+template<class T, int n>
+co<T, n>::co() {
+    num_e = n;
+    arr = new T[num_e];
+    head = NULL;
+    co = NULL;
+}
+
+template<class T, int n>
+bool co<T, n>::vacio()
+{
+    return head == NULL;
+}
+
+template<class T, int n>
+bool co<T, n>::lleno()
+{
+    if (vacio())
+        return false;
+
+    if (co + 1 == head)
+        return true;
+
+    if (co == arr + num_e - 1 && head == arr)
+        return true;
+
+    return false;
+}
+
+template<class T, int n>
+bool co<T, n>::push(T val)
+{
+    if (lleno())
+        return false;
+
+    if (vacio()) {
+        head = arr;
+        co = arr;
+    }
+    else {
+        if (co == arr + num_e - 1)
+            co = arr;
+        else
+            co++;
+    }
+
+    *co = val;
+    return true;
+}
+
+template<class T, int n>
+bool co<T, n>::pop(T& val)
+{
+    if (vacio())
+        return false;
+
+    val = *head;
+
+    if (head == co) {
+        head = NULL;
+        co = NULL;
+        return true;
+    }
+
+    if (head == arr + num_e - 1)
+        head = arr;
+    else
+        head++;
+
+    return true;
+}
+
+template<class T, int n>
+co<T, n>::~co()
+{
+    delete[]arr;
+}
+
+int main() {
+    co<int, 10> c;
+
+    int n, x;
+
+    cout << "Cantidad de elementos";
+    cin >> n;
+
+    if (n > 10) {
+        cout << "La cantidad es demasiada\n";
+        return 0;
+    }
+
+    for (int i = 0; i < n; i++) {
+        cout << "Ingrese valor: ";
+        cin >> x;
+
+        if (!c.push(x)) {
+            cout << "cola llena\n";
+            break;
+        }
+    }
+
+    cout << "\nElementos en orden:\n";
+
+    while (!c.vacio()) {
+        if (c.pop(x)) {
+            cout << x << " ";
+        }
+    }
+
+    cout << endl;
+
+    return 0;
+}
