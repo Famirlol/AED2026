@@ -2,14 +2,14 @@
 using namespace std;
 
 template<class T, int n = 10>
-struct co {
+struct cola {
     int num_e;
     T* arr;
     T* head;
-    T* co;
+    T* cola;
 
-    co();
-    ~co();
+    cola();
+    ~cola();
     bool vacio();
     bool lleno();
     bool push(T val);
@@ -17,66 +17,66 @@ struct co {
 };
 
 template<class T, int n>
-co<T, n>::co() {
+cola<T, n>::cola() {
     num_e = n;
     arr = new T[num_e];
     head = NULL;
-    co = NULL;
+    cola = NULL;
 }
 
 template<class T, int n>
-bool co<T, n>::vacio()
+bool cola<T, n>::vacio()
 {
     return head == NULL;
 }
 
 template<class T, int n>
-bool co<T, n>::lleno()
+bool cola<T, n>::lleno()
 {
     if (vacio())
         return false;
 
-    if (co + 1 == head)
+    if (cola + 1 == head)
         return true;
 
-    if (co == arr + num_e - 1 && head == arr)
+    if (cola == arr + num_e - 1 && head == arr)
         return true;
 
     return false;
 }
 
 template<class T, int n>
-bool co<T, n>::push(T val)
+bool cola<T, n>::push(T val)
 {
     if (lleno())
         return false;
 
     if (vacio()) {
         head = arr;
-        co = arr;
+        cola = arr;
     }
     else {
-        if (co == arr + num_e - 1)
-            co = arr;
+        if (cola == arr + num_e - 1)
+            cola = arr;
         else
-            co++;
+            cola++;
     }
 
-    *co = val;
+    *cola = val;
     return true;
 }
 
 template<class T, int n>
-bool co<T, n>::pop(T& val)
+bool cola<T, n>::pop(T& val)
 {
     if (vacio())
         return false;
 
     val = *head;
 
-    if (head == co) {
+    if (head == cola) {
         head = NULL;
-        co = NULL;
+        cola = NULL;
         return true;
     }
 
@@ -89,13 +89,13 @@ bool co<T, n>::pop(T& val)
 }
 
 template<class T, int n>
-co<T, n>::~co()
+cola<T, n>::~cola()
 {
     delete[]arr;
 }
 
 int main() {
-    co<int, 10> c;
+    cola<int, 10> c;
 
     int n, x;
 
@@ -112,7 +112,7 @@ int main() {
         cin >> x;
 
         if (!c.push(x)) {
-            cout << "cola llena\n";
+            cout << "colala llena\n";
             break;
         }
     }
