@@ -3,10 +3,10 @@ using namespace std;
 
 template<class T, int n = 10>
 struct cola {
-    int num_e;
+    int num_elem;
     T* arr;
     T* head;
-    T* cola;
+    T* tail;
 
     cola();
     ~cola();
@@ -18,10 +18,10 @@ struct cola {
 
 template<class T, int n>
 cola<T, n>::cola() {
-    num_e = n;
-    arr = new T[num_e];
+    num_elem = n;
+    arr = new T[num_elem];
     head = NULL;
-    cola = NULL;
+    tail = NULL;
 }
 
 template<class T, int n>
@@ -36,10 +36,10 @@ bool cola<T, n>::lleno()
     if (vacio())
         return false;
 
-    if (cola + 1 == head)
+    if (tail + 1 == head)
         return true;
 
-    if (cola == arr + num_e - 1 && head == arr)
+    if (tail == arr + num_elem - 1 && head == arr)
         return true;
 
     return false;
@@ -53,16 +53,16 @@ bool cola<T, n>::push(T val)
 
     if (vacio()) {
         head = arr;
-        cola = arr;
+        tail = arr;
     }
     else {
-        if (cola == arr + num_e - 1)
-            cola = arr;
+        if (tail == arr + num_elem - 1)
+            tail = arr;
         else
-            cola++;
+            tail++;
     }
 
-    *cola = val;
+    *tail = val;
     return true;
 }
 
@@ -74,13 +74,13 @@ bool cola<T, n>::pop(T& val)
 
     val = *head;
 
-    if (head == cola) {
+    if (head == tail) {
         head = NULL;
-        cola = NULL;
+        tail = NULL;
         return true;
     }
 
-    if (head == arr + num_e - 1)
+    if (head == arr + num_elem - 1)
         head = arr;
     else
         head++;
@@ -99,11 +99,11 @@ int main() {
 
     int n, x;
 
-    cout << "Cantidad de elementos";
+    cout << "Cuantos elementos desea ingresar: ";
     cin >> n;
 
     if (n > 10) {
-        cout << "La cantidad es demasiada\n";
+        cout << "Excede la capacidad de la cola\n";
         return 0;
     }
 
@@ -112,12 +112,12 @@ int main() {
         cin >> x;
 
         if (!c.push(x)) {
-            cout << "colala llena\n";
+            cout << "Cola llena\n";
             break;
         }
     }
 
-    cout << "\nElementos en orden:\n";
+    cout << "\nElementos en orden FIFO:\n";
 
     while (!c.vacio()) {
         if (c.pop(x)) {
