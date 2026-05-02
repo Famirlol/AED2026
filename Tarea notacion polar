@@ -1,0 +1,153 @@
+#include <iostream>
+
+using namespace std;
+
+int ObtenerPrecedencia(char val) {
+    if (val == '+' || val == '-') { return 1; }
+    else if (val == '*' || val == '/') { return 2; }
+    return -1;
+}
+
+bool EsOperador(char val) {
+    return((val == '+') || (val == '-') || (val == '*') || (val == '/') || (val == '(') || (val == ')'));
+}
+
+int CalcularOperacion(char car, int a, int b) {
+    if (car == '+') return (a + b);
+    else if (car == '-') return (a - b);
+    else if (car == '*') return a * b;
+    else if (car == '/') return a / b;
+    return 0;
+}
+
+template <class T>
+struct Nodo {
+    T dato;
+    Nodo* siguiente;
+    Nodo* anterior;
+    Nodo(T val) { dato = val; siguiente = 0; anterior = 0; }
+};
+
+template <class T>
+struct ListaEnlazada {
+    Nodo<T>* cola;
+    Nodo<T>* cabeza;
+    int num_elem;
+
+    ListaEnlazada() { cola = 0; cabeza = 0; num_elem = 0; }
+
+    ~ListaEnlazada() {
+        Nodo<T>* temp = cabeza;
+        while (cabeza) {
+            cabeza = temp->siguiente;
+            delete temp;
+            temp = cabeza;
+        }
+    }
+
+    void insertar_frente(T val) {
+        Nodo<T>* t = new Nodo<T>(val);
+        if (!cabeza) { cabeza = t; cola = t; }
+        else { t->siguiente = cabeza; cabeza->anterior = t; cabeza = t; }
+        num_elem++;
+    }
+
+    void insertar_atras(T val) {
+        Nodo<T>* t = new Nodo<T>(val);
+        if (!cabeza) { cabeza = t; cola = t; }
+        else { t->anterior = cola; cola->siguiente = t; cola = t; }
+        num_elem++;
+    }
+
+    void eliminar_frente(T &val) {
+        if (!cabeza) return;
+        val = cabeza->dato;
+        if (cabeza == cola) { delete cabeza; cabeza = 0; cola = 0; }
+        else { cabeza = cabeza->siguiente; delete cabeza->anterior; cabeza->anterior = 0; }
+        num_elem--;
+    }
+
+    void eliminar_atras(T &val) {
+        if (!cola) return;
+        val = cola->dato;
+        if (cabeza == cola) { delete cola; cabeza = 0; cola = 0; }
+        else { cola = cola->anterior; delete cola->siguiente; cola->siguiente = 0; }
+        num_elem--;
+    }
+
+    void imprimir() {
+        Nodo<T>* temp = cola;
+        if (!temp) return;
+        while (temp) {
+            cout << temp->dato << " ";
+            temp = temp->anterior;
+        }
+        cout << endl;
+    }
+};
+
+int main() {
+    char Operacion[100]; // Buffer más grande para el cin
+    ListaEnlazada<char> Pila;
+    ListaEnlazada<char> Resultado;
+    ListaEnlazada<int> Resolver;
+    char basura_char;
+    int basura_int;
+
+    cout << "Ingrese la operacion (ejemplo 3+4*2/(1-5)): ";
+    cin >> Operacion;
+
+    char* p = Operacion;
+    while (*p != '\0') {
+        if (!EsOperador(*p)) { 
+            Resultado.insertar_frente(*p);
+        }
+        else if (*p == '(') { 
+            Pila.insertar_frente(*p); 
+        }
+        else if (*p == ')') {
+            while (Pila.cabeza && Pila.cabeza->dato != '(') {
+                Resultado.insertar_frente(Pila.cabeza->dato);
+                Pila.eliminar_frente(basura_char);
+            }
+            Pila.eliminar_frente(basura_char);
+        }
+        else {
+            while (Pila.cabeza && ObtenerPrecedencia(*p) <= ObtenerPrecedencia(Pila.cabeza->dato)) {
+                Resultado.insertar_frente(Pila.cabeza->dato);
+                Pila.eliminar_frente(basura_char);
+            }
+            Pila.insertar_frente(*p);
+        }
+        p++;
+    }
+
+    while (Pila.cabeza) {
+        Resultado.insertar_frente(Pila.cabeza->dato);
+        Pila.eliminar_frente(basura_char);
+    }
+
+    cout << "\nResultado Postfijo: ";
+    Resultado.imprimir();
+
+    if (Resultado.num_elem > 2) {
+        while (Resultado.cola) {
+            if (EsOperador(Resultado.cola->dato)) {
+                int b = Resolver.cola->dato;
+                int a = Resolver.cola->anterior->dato;
+                Resolver.eliminar_atras(basura_int);
+                Resolver.eliminar_atras(basura_int);
+                Resolver.insertar_atras(CalcularOperacion(Resultado.cola->dato, a, b));
+            } 
+            else {
+                Resolver.insertar_atras(Resultado.cola->dato - '0');
+            }
+            Resultado.eliminar_atras(basura_char);
+        }
+    }
+
+    cout << "Resultado Final: ";
+    Resolver.imprimir();
+
+    return 0;
+}
