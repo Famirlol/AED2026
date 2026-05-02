@@ -1,101 +1,123 @@
 #include <iostream>
+using namespace std;
 
-template<class T>
-struct ASC {
-    bool operator () (T a, T b) { return a < b; }
+template<class T, int N = 5>
+struct Cola {
+	int Longitud;
+	T* arr;
+	T* head = nullptr;
+	T* tail = nullptr;
+
+	Cola();
+	~Cola();
+
+	bool EstaLleno();
+	bool EstaVacio();
+	bool Push(T valor);
+	bool Pop(T& valor);
+	void Print();
 };
 
-template<class T>
-struct DES {
-    bool operator () (T a, T b) { return a > b; }
-};
+template<class T, int N>
+Cola<T, N>::Cola() {
+	Longitud = N;
+	arr = new T[Longitud];
+	head = nullptr;
+	tail = nullptr;
+}
 
-template<class T>
-struct Node {
-    T data;
-    Node* next;
+template<class T, int N>
+Cola<T, N>::~Cola() {
+	delete[] arr;
+}
 
-    Node(T val) {
-        data = val;
-        next = 0;
-    }
-};
+template<class T, int N>
+bool Cola<T, N>::EstaVacio() {
+	return (head == nullptr);
+}
 
-template<class T, class O>
-struct ListaOrdenada {
-    Node<T>* head;
-    O Orden;
+template<class T, int N>
+bool Cola<T, N>::EstaLleno() {
+	if (EstaVacio()) return false;
+	return tail == head;
+}
 
-    ListaOrdenada() {
-        head = 0;
-    }
+template<class T, int N>
+bool Cola<T, N>::Push(T valor) {
+	if (EstaLleno()) return false;
 
-    ~ListaOrdenada() {
-        Node<T>* temp = head;
-        while (temp) {
-            temp = temp->next;
-            delete head;
-            head = temp;
-        }
-    }
+	if (EstaVacio()) {
+		head = arr;
+		tail = arr;
+	}
 
-    bool find(T val, Node<T>** &p) {
-        p = &head;
-        while ((*p) && Orden((*p)->data, val)) {
-            p = &(*p)->next;
-        }
-        return ((*p) && (*p)->data == val);
-    }
+	*tail = valor;
 
-    bool insert(T val) {
-        Node<T>** p;
-        if (find(val, p)) { return 0; }
+	if (tail == arr + Longitud - 1)
+		tail = arr;
+	else
+		++tail;
 
-        else {
-            Node<T>* t = new Node<T>(val);
-            t->next = *p;
-            *p = t;
-            return 1;
-        }
-    }
+	return true;
+}
 
-    bool remove(int val) {
-        Node<T>** p;
-        if (find(val, p)) {
-            Node<T>* temp = *p;
-            *p = temp->next;
-            delete temp;
+template<class T, int N>
+bool Cola<T, N>::Pop(T& valor) {
+	if (EstaVacio()) return false;
 
-            return 1;
-        }
+	valor = *head;
 
-        else { return 0; }
-    }
+	if (head == arr + Longitud - 1)
+		head = arr;
+	else
+		++head;
 
-    void print() {
-        Node<T>* temp = head;
-        while (temp) {
-            std::cout << temp->data << " -> ";
-            temp = temp->next;
-        }
+	if (head == tail) {
+		head = nullptr;
+		tail = nullptr;
+	}
 
-        std::cout << std::endl;
-    }
-};
+	return true;
+}
 
+template<class T, int N>
+void Cola<T, N>::Print() {
+	if (EstaVacio()) {
+		cout << "Cola vacia" << endl;
+		return;
+	}
 
-int main()
-{
-    ListaOrdenada<char, ASC<char>> lista;
-    lista.insert('A');
-    lista.print();
-    lista.insert('L');
-    lista.print();
-    lista.insert('J');
-    lista.print();
-    lista.insert('D');
-    lista.print();
-    lista.insert('E');
-    lista.print();
+	cout << "Cola: [ ";
+	T* actual = head;
+	while (true) {
+		cout << *actual << " ";
+		T* siguiente = (actual == arr + Longitud - 1) ? arr : actual + 1;
+		if (siguiente == tail) break;
+		actual = siguiente;
+	}
+	cout << "]" << endl;
 
+	cout << "Cabeza: " << *head << endl;
+	cout << "Tail: " << *tail << endl;
+
+}
+
+int main() {
+	Cola<int, 5> cola;
+	int e;
+
+	cola.Push(10);
+	cola.Push(20);
+	cola.Push(30);
+	cola.Print();
+
+	cola.Pop(e);
+	cola.Print();
+
+	cola.Push(40);
+	cola.Push(50);
+	cola.Push(60);
+	cola.Print();
+
+	return 0;
 }
