@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <string>
 using namespace std;
@@ -11,89 +10,88 @@ struct Libro {
 };
 
 template <class T>
-struct CNode {
-    T value;
-    CNode<T>* next;
+struct Nodo {
+    T valor;
+    Nodo<T>* siguiente;
 
-    CNode(T v) : value(v), next(nullptr) {}
+    Nodo(T v) : valor(v), siguiente(nullptr) {}
 };
 
 struct ComparadorLibro {
     int criterio;
-    bool asc;
+    bool ascendente;
 
-    ComparadorLibro(int c, bool a) : criterio(c), asc(a) {}
+    ComparadorLibro(int c, bool a) : criterio(c), ascendente(a) {}
 
     bool operator()(const Libro& a, const Libro& b) {
         switch (criterio) {
-        case 1: return asc ? a.titulo < b.titulo : a.titulo > b.titulo;
-        case 2: return asc ? a.autor < b.autor : a.autor > b.autor;
-        case 3: return asc ? a.precio < b.precio : a.precio > b.precio;
-        case 4: return asc ? a.calificacion < b.calificacion : a.calificacion > b.calificacion;
+        case 1: return ascendente ? a.titulo < b.titulo : a.titulo > b.titulo;
+        case 2: return ascendente ? a.autor < b.autor : a.autor > b.autor;
+        case 3: return ascendente ? a.precio < b.precio : a.precio > b.precio;
+        case 4: return ascendente ? a.calificacion < b.calificacion : a.calificacion > b.calificacion;
         }
         return false;
     }
 };
 
-template <class T, class Compare>
-class CSortedList {
+template <class T, class Comparador>
+class ListaOrdenada {
 public:
-    CSortedList(Compare c) : head(nullptr), comp(c) {}
+    ListaOrdenada(Comparador c) : cabeza(nullptr), comp(c) {}
 
-    bool find(T x, CNode<T>**& p) {
-        for (p = &head; *p && comp((*p)->value, x); p = &((*p)->next));
+    bool buscar(T x, Nodo<T>**& p) {
+        for (p = &cabeza; *p && comp((*p)->valor, x); p = &((*p)->siguiente));
 
         return *p &&
-            !comp(x, (*p)->value) &&
-            !comp((*p)->value, x);
+            !comp(x, (*p)->valor) &&
+            !comp((*p)->valor, x);
     }
 
-    bool ins(T x) {
-        CNode<T>** p;
+    bool insertar(T x) {
+        Nodo<T>** p;
+        if (buscar(x, p)) return false;
 
-        if (find(x, p)) return false;
-
-        CNode<T>* t = new CNode<T>(x);
-        t->next = *p;
-        *p = t;
+        Nodo<T>* nuevo = new Nodo<T>(x);
+        nuevo->siguiente = *p;
+        *p = nuevo;
 
         return true;
     }
 
-    void print() {
-        for (CNode<T>* t = head; t; t = t->next) {
-            cout << t->value.titulo << " | "
-                << t->value.autor << " | "
-                << t->value.precio << " | "
-                << t->value.calificacion << endl;
+    void imprimir() {
+        for (Nodo<T>* t = cabeza; t; t = t->siguiente) {
+            cout << t->valor.titulo << " | "
+                << t->valor.autor << " | "
+                << t->valor.precio << " | "
+                << t->valor.calificacion << endl;
         }
     }
 
     void buscarTitulo(const string& titulo) {
-        for (CNode<T>* t = head; t; t = t->next) {
-            if (t->value.titulo == titulo) {
-                cout << t->value.titulo << " | "
-                    << t->value.autor << " | "
-                    << t->value.precio << " | "
-                    << t->value.calificacion << endl;
+        for (Nodo<T>* t = cabeza; t; t = t->siguiente) {
+            if (t->valor.titulo == titulo) {
+                cout << t->valor.titulo << " | "
+                    << t->valor.autor << " | "
+                    << t->valor.precio << " | "
+                    << t->valor.calificacion << endl;
             }
         }
     }
 
     void buscarAutor(const string& autor) {
-        for (CNode<T>* t = head; t; t = t->next) {
-            if (t->value.autor == autor) {
-                cout << t->value.titulo << " | "
-                    << t->value.autor << " | "
-                    << t->value.precio << " | "
-                    << t->value.calificacion << endl;
+        for (Nodo<T>* t = cabeza; t; t = t->siguiente) {
+            if (t->valor.autor == autor) {
+                cout << t->valor.titulo << " | "
+                    << t->valor.autor << " | "
+                    << t->valor.precio << " | "
+                    << t->valor.calificacion << endl;
             }
         }
     }
 
 private:
-    CNode<T>* head;
-    Compare comp;
+    Nodo<T>* cabeza;
+    Comparador comp;
 };
 
 
@@ -112,14 +110,13 @@ int main() {
     }
 
     ComparadorLibro comp(criterio, asc);
-    CSortedList<Libro, ComparadorLibro> lista(comp);
+    ListaOrdenada<Libro, ComparadorLibro> lista(comp);
 
-
-    lista.ins({ "1984", "Orwell", 40, 5 });
-    lista.ins({ "ElQuijote", "Cervantes", 30, 4 });
-    lista.ins({ "CienAnosDeSoledad", "GarciaMarquez", 45, 5 });
-    lista.ins({ "LaMetamorfosis", "Kafka", 25, 5 });
-    lista.ins({ "ElPrincipito", "SaintExupery", 20, 4 });
+    lista.insertar({ "1984", "Orwell", 40, 5 });
+    lista.insertar({ "ElQuijote", "Cervantes", 30, 4 });
+    lista.insertar({ "CienAnosDeSoledad", "GarciaMarquez", 45, 5 });
+    lista.insertar({ "LaMetamorfosis", "Kafka", 25, 5 });
+    lista.insertar({ "ElPrincipito", "SaintExupery", 20, 4 });
 
     int op;
     do {
@@ -134,10 +131,10 @@ int main() {
         if (op == 1) {
             Libro l;
             cin >> l.titulo >> l.autor >> l.precio >> l.calificacion;
-            lista.ins(l);
+            lista.insertar(l);
         }
         else if (op == 2) {
-            lista.print();
+            lista.imprimir();
         }
         else if (op == 3) {
             string t;
