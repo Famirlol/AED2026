@@ -1,212 +1,120 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
-#include <string>
 #include <stack>
 #include <queue>
-#include <vector>
-#include <unordered_map>
-#include <algorithm>
-#include <cmath>
 
 struct Node {
     int data;
-    int height;
     bool cumple;
     Node* nodes[2];
 
     Node(int val) {
         data = val;
-        height = 1;
         cumple = false;
-        nodes[0] = nullptr;
-        nodes[1] = nullptr;
+        nodes[0] = 0;
+        nodes[1] = 0;
     }
 };
 
 class ArbolBinario {
     Node* head;
-    std::unordered_map<Node*, sf::Vector2f> posiciones;
+    bool flag;
 
 public:
     ArbolBinario() {
-        head = nullptr;
+        head = 0;
+        flag = 0;
     }
 
-    ~ArbolBinario() {
-        liberar(head);
+    bool find(int val, Node**& p) {
+        p = &head;
+
+        while ((*p) && (*p)->data != val) {
+            if (val < (*p)->data) { p = &(*p)->nodes[0]; }
+            else { p = &(*p)->nodes[1]; }
+        }
+
+        return((*p) && (*p)->data == val);
     }
 
     bool insert(int val) {
-        bool inserted = false;
-        // Cambiado para usar la inserción sin balanceo
-        head = insertarBST(head, val, inserted);
-        return inserted;
+        Node** p;
+
+        if (find(val, p)) { return 0; }
+
+        else {
+            *p = new Node(val);
+            return 1;
+        }
     }
 
     bool remove(int val) {
-        bool removed = false;
-        head = eliminarAVL(head, val, removed);
-        return removed;
-    }
+        Node** p;
 
-    void podar() {
-        // Regla exacta solicitada: Borrar 5, 11, 17 y 4 para que solo queden 12, 8 y 18
-        std::vector<int> aBorrar = {5, 11, 17, 4};
-        for (int valor : aBorrar) {
-            bool removido = false;
-            head = eliminarAVL(head, valor, removido);
-        }
-    }
+        if (!find(val, p)) { return 0; }
 
-    void Inorder() const {
-        inorderRec(head);
-        std::cout << std::endl;
-    }
+        else {
 
-    void resetContorno(Node* nodo) {
-        if (!nodo) return;
-        nodo->cumple = false;
-        resetContorno(nodo->nodes[0]);
-        resetContorno(nodo->nodes[1]);
-    }
+            if ((*p)->nodes[0] && (*p)->nodes[1]) {
+                Node** q = buscarRemplazo(p);
+                (*p)->data = (*q)->data;
+                p = q;
 
-    void apagarTodo() {
-        resetContorno(head);
-    }
-
-    void Hojitas() {
-        std::stack<std::pair<int, Node*>> s;
-        if (head) {
-            s.push(std::make_pair(0, head));
-        }
-
-        while (!s.empty()) {
-            switch (s.top().first) {
-            case 0:
-                if ((!s.top().second->nodes[0]) && (!s.top().second->nodes[1])) {
-                    s.top().first = 2;
-
-                    if (s.top().second->nodes[0]) {
-                        s.push(std::make_pair(0, s.top().second->nodes[0]));
-                    }
-                }
-                else {
-                    s.top().first = 4;
-                    if (s.top().second->nodes[0]) {
-                        s.push(std::make_pair(0, s.top().second->nodes[0]));
-                    }
-                }
-                break;
-
-            case 2:
-                s.top().first = 4;
-                s.top().second->cumple = true;
-                break;
-
-            case 3:
-                s.pop();
-                break;
-
-            case 4:
-                s.top().first = 3;
-                if (s.top().second->nodes[1]) {
-                    s.push(std::make_pair(0, s.top().second->nodes[1]));
-                }
-                break;
             }
+
+            Node* t = *p;
+            *p = (*p)->nodes[(*p)->nodes[0] == 0];
+            delete t;
+            return 1;
         }
     }
 
-    void Lado_Izquierdo() {
-        if (!head) return;
-        Node* p = head;
-        p->cumple = true;
-        while (p->nodes[0]) {
-            p = p->nodes[0];
-            p->cumple = true;
-        }
+    Node** buscarRemplazo(Node** p) {
+        Node** q;
+        for (q = &(*p)->nodes[!flag]; (*q)->nodes[flag]; q = &(*q)->nodes[flag]);
+
+        flag = !flag;
+        return q;
     }
 
-    void Lado_Derecha() {
-        if (!head || !head->nodes[1]) return;
+    void Inorder(Node* n) {
+        if (!n) { return; }
 
-        std::stack<std::pair<int, Node*>> izqu;
-        izqu.push(std::make_pair(0, head->nodes[1]));
-
-        while (!izqu.empty()) {
-            switch (izqu.top().first) {
-            case 0:
-                if (!izqu.top().second->nodes[1]) {
-                    izqu.top().second->cumple = 1;
-                    izqu.pop();
-                    break;
-                }
-                izqu.top().first = 1;
-                izqu.push(std::make_pair(0, izqu.top().second->nodes[1]));
-                break;
-
-            case 1:
-                izqu.top().second->cumple = 1;
-                izqu.pop();
-                break;
-            }
-        }
+        std::cout << n->data << " ";
+        Inorder(n->nodes[0]);
+        Inorder(n->nodes[1]);
     }
 
-    void perimeter() {
-        Lado_Izquierdo();
-        Hojitas();
-        Lado_Derecha();
+    int DevuelveMayor(int a, int b) {
+        if (a >= b) { return a; }
+        return b;
     }
 
-    void calcularPosiciones() {
-        posiciones.clear();
-        if (!head) return;
+    int Altura(Node* n) {
+        if (!n) { return 0; }
+        int l = Altura(n->nodes[0]);
+        int r = Altura(n->nodes[1]);
 
-        struct EstadoDibujo {
-            Node* nodo;
-            float x;
-            float espacio;
-            int nivel;
-        };
-
-        std::queue<EstadoDibujo> q;
-        q.push({ head, 350.f, 180.f, 0 });
-
-        while (!q.empty()) {
-            EstadoDibujo actual = q.front();
-            q.pop();
-
-            float y = 40.f + 70.f * actual.nivel;
-            posiciones[actual.nodo] = sf::Vector2f(actual.x, y);
-
-            float siguienteEspacio = std::max(actual.espacio / 1.6f, 20.f);
-            if (actual.nodo->nodes[0]) {
-                q.push({ actual.nodo->nodes[0], actual.x - actual.espacio, siguienteEspacio, actual.nivel + 1 });
-            }
-            if (actual.nodo->nodes[1]) {
-                q.push({ actual.nodo->nodes[1], actual.x + actual.espacio, siguienteEspacio, actual.nivel + 1 });
-            }
-        }
+        return DevuelveMayor(l, r) + 1;
     }
 
-    void Dibujamesta(sf::RenderWindow& window, sf::Font& font, bool a, float x, float y, int value, float antesX = -1, float antesY = -1) {
+    void Dibujame(sf::RenderWindow& window, sf::Font& font, bool a, float x, float y, int value, float antesX = -1, float antesY = -1) {
         std::string mensaje = std::to_string(value);
 
         if (antesX >= 0) {
             sf::Vertex line[] = {
                 sf::Vertex(sf::Vector2f(antesX, antesY), sf::Color::White),
-                sf::Vertex(sf::Vector2f(x + 30, y + 30), sf::Color::White)
+                sf::Vertex(sf::Vector2f(x, y), sf::Color::White)
             };
             window.draw(line, 2, sf::Lines);
         }
 
         sf::CircleShape circle(28.f);
         if (a) { circle.setFillColor(sf::Color(200, 130, 180)); }
-        else { circle.setFillColor(sf::Color(163, 192, 207)); }
+        else { circle.setFillColor(sf::Color(210, 240, 127)); }
 
-        circle.setOrigin(28.f, 28.f);
-        circle.setPosition(x + 30, y + 30);
+        circle.setOrigin(30.f, 30.f);
+        circle.setPosition(x + 18, y + 20);
         window.draw(circle);
 
         sf::Text text;
@@ -215,225 +123,96 @@ public:
         text.setCharacterSize(28);
         text.setFillColor(sf::Color::Black);
         text.setStyle(sf::Text::Bold);
-
-        sf::FloatRect textRect = text.getLocalBounds();
-        text.setOrigin(textRect.left + textRect.width / 2.0f, textRect.top + textRect.height / 2.0f);
-        text.setPosition(x + 30, y + 30);
+        text.setPosition(x, y);
 
         window.draw(text);
     }
 
-    void dibujarArbol(sf::RenderWindow& window, sf::Font& font, Node* nodo, float antesX = -1, float antesY = -1) {
+    void dibujarArbol(sf::RenderWindow& window, sf::Font& font, Node* nodo, float x, float y, float espacio = 400.f, float antesX = -1, float antesY = -1) {
         if (!nodo) return;
-        sf::Vector2f pos = posiciones[nodo];
+        Dibujame(window, font, nodo->cumple, x, y, nodo->data, antesX, antesY);
 
-        if (nodo->nodes[0]) dibujarArbol(window, font, nodo->nodes[0], pos.x + 30, pos.y + 30);
-        if (nodo->nodes[1]) dibujarArbol(window, font, nodo->nodes[1], pos.x + 30, pos.y + 30);
-
-        Dibujamesta(window, font, nodo->cumple, pos.x, pos.y, nodo->data, antesX, antesY);
+        dibujarArbol(window, font, nodo->nodes[0], x - espacio, y + 120, espacio / 2, x + 18, y + 20);
+        dibujarArbol(window, font, nodo->nodes[1], x + espacio, y + 120, espacio / 2, x + 18, y + 20);
     }
 
     void print(sf::RenderWindow& window, sf::Font& font) {
-        calcularPosiciones();
-        dibujarArbol(window, font, head);
+        podar();
+        dibujarArbol(window, font, head, 800, 50);
     }
 
-private:
-    void liberar(Node* nodo) {
-        if (!nodo) return;
-        liberar(nodo->nodes[0]);
-        liberar(nodo->nodes[1]);
-        delete nodo;
+    void GuardaTodo(std::stack<Node*> &s) {
+        std::queue<Node*> q;
+        q.push(head);
+
+        while (!q.empty()) {
+            if (q.front()->nodes[0]) { q.push(q.front()->nodes[0]); }
+            if (q.front()->nodes[1]) { q.push(q.front()->nodes[1]); }
+
+            s.push(q.front());
+            q.pop();
+        }
     }
 
-    int altura(Node* nodo) const {
-        return nodo ? nodo->height : 0;
-    }
+    void podar() {
+        std::stack<Node*> s;
+        GuardaTodo(s);
 
-    int actualizarAltura(Node* nodo) {
-        if (!nodo) return 0;
-        nodo->height = std::max(altura(nodo->nodes[0]), altura(nodo->nodes[1])) + 1;
-        return nodo->height;
-    }
+        while (!s.empty()) {
+            int izq = Altura(s.top()->nodes[0]);
+            int der = Altura(s.top()->nodes[1]);
 
-    int balance(Node* nodo) const {
-        return nodo ? altura(nodo->nodes[0]) - altura(nodo->nodes[1]) : 0;
-    }
+            if (izq - der != 0) { 
+                std::queue<Node*> q2;
+                std::stack<Node*> paraBorrar;
 
-    Node* rotarDerecha(Node* y) {
-        Node* x = y->nodes[0];
-        Node* t2 = x->nodes[1];
-        x->nodes[1] = y;
-        y->nodes[0] = t2;
-        actualizarAltura(y);
-        actualizarAltura(x);
-        return x;
-    }
+                int i = 0;
+                int c = 0;
+                if (izq < der) { c = izq; }
+                else { c = der; }
+                q2.push(s.top()->nodes[izq < der]);
 
-    Node* rotarIzquierda(Node* x) {
-        Node* y = x->nodes[1];
-        Node* t2 = y->nodes[0];
-        y->nodes[0] = x;
-        x->nodes[1] = t2;
-        actualizarAltura(x);
-        actualizarAltura(y);
-        return y;
-    }
+                while (!q2.empty()) {
+                    if (i >= pow(2, c)-1) { paraBorrar.push(q2.front()); }
+                    
+                    if (q2.front()->nodes[0]) { q2.push(q2.front()->nodes[0]); }
+                    if (q2.front()->nodes[1]) { q2.push(q2.front()->nodes[1]); }
+                    
+                    q2.pop();
+                    i++;
+                }
 
-    Node* balancear(Node* nodo) {
-        if (!nodo) return nodo;
-        actualizarAltura(nodo);
-        int fb = balance(nodo);
-
-        if (fb > 1) {
-            if (balance(nodo->nodes[0]) < 0) {
-                nodo->nodes[0] = rotarIzquierda(nodo->nodes[0]);
+                while (!paraBorrar.empty()) {
+                    remove(paraBorrar.top()->data);
+                    paraBorrar.pop();
+                }
             }
-            return rotarDerecha(nodo);
-        }
-
-        if (fb < -1) {
-            if (balance(nodo->nodes[1]) > 0) {
-                nodo->nodes[1] = rotarDerecha(nodo->nodes[1]);
-            }
-            return rotarIzquierda(nodo);
-        }
-
-        return nodo;
-    }
-
-    // NUEVA FUNCIÓN: Inserción de Árbol de Búsqueda Binario normal (sin balancear)
-    Node* insertarBST(Node* nodo, int val, bool& inserted) {
-        if (!nodo) {
-            inserted = true;
-            return new Node(val);
-        }
-
-        if (val < nodo->data) nodo->nodes[0] = insertarBST(nodo->nodes[0], val, inserted);
-        else if (val > nodo->data) nodo->nodes[1] = insertarBST(nodo->nodes[1], val, inserted);
-        else return nodo;
-
-        actualizarAltura(nodo); // Actualizamos la altura pero NO balanceamos
-        return nodo;
-    }
-
-    Node* insertarAVL(Node* nodo, int val, bool& inserted) {
-        if (!nodo) {
-            inserted = true;
-            return new Node(val);
-        }
-
-        if (val < nodo->data) nodo->nodes[0] = insertarAVL(nodo->nodes[0], val, inserted);
-        else if (val > nodo->data) nodo->nodes[1] = insertarAVL(nodo->nodes[1], val, inserted);
-        else return nodo;
-
-        return balancear(nodo);
-    }
-
-    Node* minimo(Node* nodo) const {
-        Node* actual = nodo;
-        while (actual && actual->nodes[0]) actual = actual->nodes[0];
-        return actual;
-    }
-
-    Node* eliminarAVL(Node* nodo, int val, bool& removed) {
-        if (!nodo) return nodo;
-
-        if (val < nodo->data) nodo->nodes[0] = eliminarAVL(nodo->nodes[0], val, removed);
-        else if (val > nodo->data) nodo->nodes[1] = eliminarAVL(nodo->nodes[1], val, removed);
-        else {
-            removed = true;
-            if (!nodo->nodes[0] || !nodo->nodes[1]) {
-                Node* hijo = nodo->nodes[0] ? nodo->nodes[0] : nodo->nodes[1];
-                delete nodo;
-                return hijo;
-            }
-
-            Node* sucesor = minimo(nodo->nodes[1]);
-            nodo->data = sucesor->data;
-            bool ignored = false;
-            nodo->nodes[1] = eliminarAVL(nodo->nodes[1], sucesor->data, ignored);
-        }
-
-        return balancear(nodo);
-    }
-
-    int recalcularAlturas(Node* nodo) {
-        if (!nodo) return 0;
-        int izq = recalcularAlturas(nodo->nodes[0]);
-        int der = recalcularAlturas(nodo->nodes[1]);
-        nodo->height = std::max(izq, der) + 1;
-        return nodo->height;
-    }
-
-    void recolectarDesbalanceados(Node* nodo, std::vector<int>& valores) const {
-        if (!nodo) return;
-        recolectarDesbalanceados(nodo->nodes[0], valores);
-        recolectarDesbalanceados(nodo->nodes[1], valores);
-        if (std::abs(balance(nodo)) > 1) {
-            valores.push_back(nodo->data);
+             s.pop();        
         }
     }
 
-    void inorderRec(Node* nodo) const {
-        if (!nodo) return;
-        inorderRec(nodo->nodes[0]);
-        std::cout << nodo->data << " ";
-        inorderRec(nodo->nodes[1]);
-    }
+
 };
-
-bool cargarFuente(sf::Font& font) {
-    const char* rutas[] = {
-        "C:/Windows/Fonts/arial.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-        "arial.ttf"
-    };
-
-    for (const char* ruta : rutas) {
-        if (font.loadFromFile(ruta)) return true;
-    }
-    return false;
-}
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(1600, 700), "Arbol SFML");
+    sf::RenderWindow window(sf::VideoMode(1600, 700), "Árbol SFML");
     sf::Font font;
-    if (!cargarFuente(font)) {
-        std::cout << "Error cargando la fuente" << std::endl;
-        return -1;
-    }
+    if (!font.loadFromFile("C:/Windows/Fonts/arial.ttf")) return -1;
+    
+    std::vector<int> Elementos = {12, 8, 18, 5, 11, 17, 4};
 
     ArbolBinario a;
-
-    std::vector<int> lista = { 5, 3, 12, 15, 18, 24, 30, 35, 81 };
-    std::size_t indiceActual = 0;
-
-    sf::Clock reloj;
+    
+    for (int i = 0; i < Elementos.size(); i++) {
+        a.insert(Elementos[i]);
+    }
 
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
                 window.close();
-            else if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::P) {
-                a.podar();
-                a.apagarTodo();
-                a.perimeter();
-            }
-        }
-
-
-        if (indiceActual < lista.size() && reloj.getElapsedTime().asSeconds() > 1.5f) {
-            a.insert(lista[indiceActual]);
-
-            a.apagarTodo();
-            a.perimeter();
-
-            indiceActual++;
-            reloj.restart();
         }
 
         window.clear(sf::Color::Black);
@@ -441,5 +220,4 @@ int main()
         window.display();
     }
 
-    return 0;
 }
