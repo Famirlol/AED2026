@@ -38,7 +38,8 @@ public:
 
     bool insert(int val) {
         bool inserted = false;
-        head = insertarAVL(head, val, inserted);
+        // Cambiado para usar la inserción sin balanceo
+        head = insertarBST(head, val, inserted);
         return inserted;
     }
 
@@ -304,6 +305,21 @@ private:
             return rotarIzquierda(nodo);
         }
 
+        return nodo;
+    }
+
+    // NUEVA FUNCIÓN: Inserción de Árbol de Búsqueda Binario normal (sin balancear)
+    Node* insertarBST(Node* nodo, int val, bool& inserted) {
+        if (!nodo) {
+            inserted = true;
+            return new Node(val);
+        }
+
+        if (val < nodo->data) nodo->nodes[0] = insertarBST(nodo->nodes[0], val, inserted);
+        else if (val > nodo->data) nodo->nodes[1] = insertarBST(nodo->nodes[1], val, inserted);
+        else return nodo;
+
+        actualizarAltura(nodo); // Actualizamos la altura pero NO balanceamos
         return nodo;
     }
 
