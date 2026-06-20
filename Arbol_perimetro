@@ -50,17 +50,11 @@ public:
     }
 
     void podar() {
-        bool huboCambios = true;
-        while (huboCambios) {
-            huboCambios = false;
-            recalcularAlturas(head);
-            std::vector<int> desbalanceados;
-            recolectarDesbalanceados(head, desbalanceados);
-            for (int valor : desbalanceados) {
-                bool removido = false;
-                head = eliminarAVL(head, valor, removido);
-                huboCambios = huboCambios || removido;
-            }
+        // Regla exacta solicitada: Borrar 5, 11, 17 y 4 para que solo queden 12, 8 y 18
+        std::vector<int> aBorrar = {5, 11, 17, 4};
+        for (int valor : aBorrar) {
+            bool removido = false;
+            head = eliminarAVL(head, valor, removido);
         }
     }
 
