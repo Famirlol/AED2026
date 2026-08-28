@@ -1,0 +1,140 @@
+#include <iostream>
+using namespace std;
+
+template <class T>
+class Asc {
+public:
+    bool operator()(T a, T b) {
+        return a < b;
+    }
+};
+
+template <class T, class O, int N = 10>
+class ListOrd {
+public:
+    int tam = N;
+    int elem = 0;
+
+    T Arr[N];
+
+    T* inicio = Arr;
+    T* fin = Arr;
+
+    O comparar;
+
+
+    bool encontrar(T e, T*& pos) {
+        T* izq = inicio;
+        T* der = fin;
+
+        while (izq < der) {
+            int mitad = (der - izq) / 2; 
+            T* medio = izq;
+
+
+            int pasos = mitad;
+            while (pasos > 0) {
+                medio++;
+                pasos--;
+            }
+
+            if (*medio == e) {
+                pos = medio; 
+                return true;
+            }
+
+            if (comparar(*medio, e)) {
+                izq = medio;
+                izq++; 
+            }
+            else {
+                der = medio;
+            }
+        }
+
+
+        pos = izq;
+        return false;
+    }
+
+    bool add(T e) {
+        if (elem == tam) {
+            return false; 
+        }
+
+        T* pos = nullptr;
+        encontrar(e, pos);
+
+        T* p = fin;
+        T* ant = fin;
+        if (p > pos) {
+            ant--;
+        }
+
+        while (p > pos) {
+            *p = *ant;
+            p--;
+            ant--;
+        }
+
+
+        *pos = e;
+        elem++;
+        fin++;
+
+        return true;
+    }
+
+    bool del(T e) {
+        if (elem == 0) {
+            return false;
+        }
+
+        T* pos = nullptr;
+
+        if (!encontrar(e, pos)) {
+            return false;
+        }
+
+        T* p = pos;
+        T* sig = pos;
+        sig++;
+
+        while (sig < fin) {
+            *p = *sig;
+            p++;
+            sig++;
+        }
+
+        elem--;
+        fin--;
+        return true;
+    }
+
+    void Print() {
+        T* p = inicio;
+
+        while (p < fin) {
+            cout << *p << " ";
+            p++;
+        }
+        cout << endl;
+    }
+};
+
+int main() {
+    ListOrd<int, Asc<int>, 10> LO;
+
+    LO.add(5);
+    LO.add(3);
+    LO.add(4);
+    LO.add(4); 
+
+    LO.Print(); 
+
+    LO.del(3);
+
+    LO.Print(); 
+
+    return 0;
+}
