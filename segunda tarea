@@ -1,0 +1,68 @@
+#include <iostream>
+using namespace std;
+struct DIV {
+    bool operator () (int a) {
+        return a % 3 == 0;
+    }
+};
+
+template <class O>
+struct util {
+    O orden;
+
+    void merge(int* ini, int* mid, int* fin) {
+        while (ini < mid&& mid < fin) {
+            if (*ini > *mid) {
+                int i = *mid;
+                for (int* p = mid; p > ini; p--) {
+                    *p = *(p - 1);
+                }
+
+                *ini = i;
+                mid++;
+            }
+
+            ini++;
+        }
+    }
+
+    void split(int* ini, int* fin) {
+        int* ii = ini;
+
+        while (ini < fin) {
+            if (orden(*ini)) {
+                int i = *ini;
+                for (int* p = ini; p > ii; p--) {
+                    *p = *(p - 1);
+                }
+
+                *ii = i;
+                ii++;
+            }
+
+            ini++;
+        }
+    }
+
+    void print(int* ini, int* fin) {
+        while (ini < fin) {
+            cout << *ini << " ";
+            ini++;
+        }
+
+        cout << endl;
+    }
+
+};
+
+int main()
+{
+    int spl[11] = { 3, 2, 1,5, 9, 7, 11, 8, 33, 25, 4 };
+    int mrg[11] = { 1, 4, 7,8, 21,3,4,5,6,9 };
+    util<DIV> gabo;
+
+    gabo.merge(spl, spl + 5, spl + 10);
+    gabo.print(spl, spl + 10);
+    gabo.split(mrg, mrg + 11);
+    gabo.print(mrg, mrg + 11);
+}
