@@ -1,0 +1,155 @@
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+template <class T>
+class CVector
+{
+public:
+    CVector(int s = 5);
+    ~CVector();
+
+    void push_back(T x);
+    void pop_front();
+
+    T& front();
+    bool empty() { return nelem == 0; }
+
+private:
+    void expand();
+    T* vec;
+    int nelem, size;
+};
+
+template <class T>
+CVector<T>::CVector(int s)
+{
+    size = s;
+    vec = new T[size];
+    nelem = 0;
+}
+
+template <class T>
+CVector<T>::~CVector()
+{
+    delete[] vec;
+}
+
+template <class T>
+void CVector<T>::expand()
+{
+    T* q = new T[size * 2];
+    for (int i = 0; i < size; ++i)
+        q[i] = vec[i];
+    delete[] vec;
+    vec = q;
+    size *= 2;
+}
+
+template <class T>
+void CVector<T>::push_back(T x)
+{
+    if (nelem == size)
+        expand();
+    vec[nelem] = x;
+    nelem++;
+}
+
+template <class T>
+void CVector<T>::pop_front()
+{
+    for (int i = 0; i < nelem - 1; ++i)
+        vec[i] = vec[i + 1];
+    nelem--;
+}
+
+template <class T>
+T& CVector<T>::front()
+{
+    return *vec;
+}
+
+template <class T>
+class Cola {
+private:
+    CVector<T> base;
+
+public:
+    bool empty() { return base.empty(); }
+
+    void push(T e) {
+        base.push_back(e);
+    }
+
+    bool pop() {
+        if (empty()) return false;
+        base.pop_front();
+        return true;
+    }
+
+    T front() {
+        if (!empty()) {
+            return base.front();
+        }
+        return 0;
+    }
+};
+
+int sumarDigitos(int numero) {
+    int suma = 0;
+    while (numero > 0) {
+        suma += numero % 10;
+        numero /= 10;
+    }
+    return suma;
+}
+
+int main() {
+    Cola<int> colaDigitos;
+    string numerosIngresados;
+    int posicion;
+
+    cout << "Piensa en un multiplo de 9 y tacha UN digito (que no sea 0)." << endl;
+    cout << "Ingresa los digitos restantes juntos (ej. si era 927 y tachas 2, ingresa 97): ";
+    cin >> numerosIngresados;
+
+    cout << "¿En que posicion estaba el digito tachado? (1 para el inicio, 2 para la segunda...): ";
+    cin >> posicion;
+
+    for (int i = 0; i < numerosIngresados.length(); i++) {
+        char c = numerosIngresados[i];
+        if (c >= '0' && c <= '9') {
+            colaDigitos.push(c - '0');
+        }
+    }
+
+    int sumaTotal = 0;
+    while (!colaDigitos.empty()) {
+        sumaTotal += colaDigitos.front();
+        colaDigitos.pop();
+    }
+
+    while (sumaTotal >= 10) {
+        sumaTotal = sumarDigitos(sumaTotal);
+    }
+
+    int digitoFaltante = 9 - sumaTotal;
+
+    if (digitoFaltante == 0) {
+        digitoFaltante = 9;
+    }
+
+    string numeroOriginal = numerosIngresados;
+    char charFaltante = digitoFaltante + '0';
+
+    if (posicion >= 1 && posicion <= numerosIngresados.length() + 1) {
+        numeroOriginal.insert(posicion - 1, 1, charFaltante);
+        cout << "El numero original completo era: " << numeroOriginal << endl;
+    }
+    else {
+        cout << "(Posicion invalida, no se pudo reconstruir el numero original)" << endl;
+    }
+
+    return 0;
+}
