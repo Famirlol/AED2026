@@ -1,0 +1,218 @@
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+template <class T>
+class CVector
+{
+public:
+    CVector(int s = 5);
+    ~CVector();
+
+    void push_back(T x);
+    void pop_back();
+
+    T& back();
+    bool empty() { return nelem == 0; }
+
+private:
+    void expand();
+    T* vec;
+    int nelem, size;
+};
+
+template <class T>
+CVector<T>::CVector(int s)
+{
+    size = s;
+    vec = new T[size];
+    nelem = 0;
+}
+
+template <class T>
+CVector<T>::~CVector()
+{
+    delete[] vec;
+}
+
+template <class T>
+void CVector<T>::expand()
+{
+    T* q = new T[size * 2];
+    for (int i = 0; i < size; ++i)
+        q[i] = vec[i];
+    delete[] vec;
+    vec = q;
+    size *= 2;
+}
+
+template <class T>
+void CVector<T>::push_back(T x)
+{
+    if (nelem == size)
+        expand();
+    vec[nelem] = x;
+    nelem++;
+}
+
+template <class T>
+void CVector<T>::pop_back()
+{
+    nelem--;
+}
+
+template <class T>
+T& CVector<T>::back()
+{
+    return *(vec + nelem - 1);
+}
+
+template <class T>
+class Pila {
+private:
+    CVector<T> base;
+
+public:
+    bool empty() { return base.empty(); }
+
+    void push(T e) {
+        base.push_back(e);
+    }
+
+    bool pop() {
+        if (empty()) return false;
+        base.pop_back();
+        return true;
+    }
+
+    T top() {
+        if (!empty()) {
+            return base.back();
+        }
+        return 0;
+    }
+};
+
+int precedencia(char op) {
+    if (op == '+' || op == '-') return 1;
+    if (op == '*' || op == '/') return 2;
+    if (op == '^') return 3;
+    return 0;
+}
+
+string infijaPostfija(string infija) {
+    Pila<char> operadores;
+    string postfija = "";
+    string tempNum = "";
+
+    for (int i = 0; i < infija.length(); i++) {
+        char actual = infija[i];
+
+        if ((actual >= '0' && actual <= '9') || actual == '.') {
+            tempNum += actual;
+        }
+        else {
+            if (tempNum != "") {
+                postfija += tempNum + " ";
+                tempNum = "";
+            }
+
+            if (actual == ' ') {
+                continue;
+            }
+
+            if (actual == '(') {
+                operadores.push(actual);
+            }
+            else if (actual == ')') {
+                while (!operadores.empty() && operadores.top() != '(') {
+                    postfija += operadores.top();
+                    postfija += " ";
+                    operadores.pop();
+                }
+                if (!operadores.empty() && operadores.top() == '(') {
+                    operadores.pop();
+                }
+            }
+            else if (actual == '+' || actual == '-' || actual == '*' || actual == '/') {
+                while (!operadores.empty() && operadores.top() != '(' &&
+                    precedencia(operadores.top()) >= precedencia(actual)) {
+                    postfija += operadores.top();
+                    postfija += " ";
+                    operadores.pop();
+                }
+                operadores.push(actual);
+            }
+        }
+    }
+
+    if (tempNum != "") {
+        postfija += tempNum + " ";
+    }
+
+    while (!operadores.empty()) {
+        postfija += operadores.top();
+        postfija += " ";
+        operadores.pop();
+    }
+
+    return postfija;
+}
+
+int evaluarPostfija(string postfija) {
+    Pila<int> valores;
+    string tempNum = "";
+
+    for (int i = 0; i < postfija.length(); i++) {
+        char actual = postfija[i];
+
+        if (actual >= '0' && actual <= '9') {
+            tempNum += actual;
+        }
+        else if (actual == ' ') {
+            if (tempNum != "") {
+                valores.push(stoi(tempNum));
+                tempNum = "";
+            }
+        }
+        else if (actual == '+' || actual == '-' || actual == '*' || actual == '/') {
+            int num2 = valores.top();
+            valores.pop();
+            int num1 = valores.top();
+            valores.pop();
+            int resultado = 0;
+
+            if (actual == '+') {
+                resultado = num1 + num2;
+            }
+            else if (actual == '-') {
+                resultado = num1 - num2;
+            }
+            else if (actual == '*') {
+                resultado = num1 * num2;
+            }
+            else if (actual == '/') {
+                resultado = num1 / num2;
+            }
+
+            valores.push(resultado);
+        }
+    }
+
+    return valores.top();
+}
+
+int main() {
+    string expresionInfija = "(3+5)*(7-4)";
+
+    cout << "1. Original: " << expresionInfija << endl;
+
+    string expresionPostfija = infijaPostfija(expresionInfija);
+    cout << "2. Formato RPN (Postfija): " << expresionPostfija << endl;
+
+    int resultado = evaluarPostfija(expresionPostfija);
+    cout << "3. Resultado final: " << resultado << endl;
+
+    return 0;
+}
