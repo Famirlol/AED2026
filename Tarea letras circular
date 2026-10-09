@@ -1,0 +1,86 @@
+#include <iostream>
+using namespace std;
+template <class T>
+struct Node {
+    T val;
+    Node* next;
+
+    Node(T v) {
+        val = v;
+        next = 0;
+    }
+};
+
+template <class T>
+class ListaCircular {
+    Node<T>* head;
+    int num_elem;
+
+public:
+    ListaCircular(int num) {
+        head = 0;
+
+        Node<T>** p = &head;
+        char data = 'A';
+        num_elem = num;
+
+        for (int i = 0; i < num - 1; i++, p = &(*p)->next) {
+            *p = new Node(data);
+            data++;
+        }
+
+        *p = new Node(data++);
+        (*p)->next = head;
+    }
+
+    void print() {
+        Node<T>** p = &head;
+        for (int i = 0; i < num_elem; i++, p = &(*p)->next) {
+            cout << (*p)->val << " -> ";
+        }
+        cout << endl;
+    }
+    
+void kill(int n) {
+        Node<T>** p = &head;
+        for (int i = 1; num_elem > 0; i++, p = &(*p)->next) {
+            
+
+            if (num_elem == 1) {
+                cout << "Eliminado " << head->val << endl;
+                num_elem--;
+                delete head;
+                head = 0;
+                
+
+                cout << "Lista final: Vacia" << endl;
+                return;
+            }
+            
+
+            if (i % (n-1) == 0) {
+                if ((*p)->next == head) {
+                    head = (*p)->next->next;
+                }
+
+                Node<T>* t = (*p)->next;
+
+                (*p)->next = (*p)->next->next;
+                cout << "Eliminado " << t->val << endl;
+                delete t;
+                num_elem--;
+
+                print();
+            }
+        }
+    }
+
+};
+
+int main()
+{
+    ListaCircular<char> gablist(8);
+    gablist.print();
+    gablist.kill(4);
+
+}
