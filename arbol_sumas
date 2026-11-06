@@ -1,0 +1,133 @@
+#include <iostream>
+#include <SFML/Graphics.hpp>
+
+struct Node {
+    int val;
+    Node* nodes[2];
+
+    Node(int v) {
+        val = v;
+        nodes[0] = 0;
+        nodes[1] = 0;
+    }
+};
+
+class ArbolSuma {
+    Node* head;
+
+public:
+
+    ArbolSuma() {
+        head = 0;
+    }
+
+    void Armar(int* ini, int* fin) {
+        int cont = 0;
+
+        for (int* i = ini; i < fin; cont++, i++);
+
+        int len = (cont * 2) - 1;
+        Node** p = new Node * [len];
+
+        int l = cont - 1;
+        for (int* i = ini; i < fin; i++, l++) {
+            p[l] = new Node(*i);
+        }
+
+        int i = len - 1;
+        int j = i - 1;
+        Node** a = p + (cont - 2);
+
+        while (j >= 0) {
+            *a = new Node(p[i]->val + p[j]->val);
+            (*a)->nodes[0] = p[j];
+            (*a)->nodes[1] = p[i];
+
+            i = i - 2;
+            j = i - 1;
+            a--;
+        }
+
+        head = *p;
+
+    }
+
+    void inorder(Node* n) {
+        if (!n) { return; }
+        inorder(n->nodes[0]);
+        std::cout << n->val << " ";
+        inorder(n->nodes[1]);
+    }
+
+    void print() {
+        inorder(head);
+        std::cout << std::endl;
+    }
+
+    void Dibujame(sf::RenderWindow& window, sf::Font& font, float x, float y, int value, float antesX = -1, float antesY = -1) {
+        std::string mensaje = std::to_string(value);
+
+        if (antesX >= 0) {
+            sf::Vertex line[] = {
+                sf::Vertex(sf::Vector2f(antesX, antesY), sf::Color::White),
+                sf::Vertex(sf::Vector2f(x, y), sf::Color::White)
+            };
+            window.draw(line, 2, sf::Lines);
+        }
+
+        sf::CircleShape circle(28.f);
+        circle.setFillColor(sf::Color(163, 192, 207));
+
+        circle.setOrigin(30.f, 30.f);
+        circle.setPosition(x + 18, y + 20);
+        window.draw(circle);
+
+        sf::Text text;
+        text.setFont(font);
+        text.setString(mensaje);
+        text.setCharacterSize(28);
+        text.setFillColor(sf::Color::Black);
+        text.setStyle(sf::Text::Bold);
+        text.setPosition(x, y);
+
+        window.draw(text);
+    }
+
+    void dibujarArbol(sf::RenderWindow& window, sf::Font& font, Node* nodo, float x, float y, float espacio = 400.f, float antesX = -1, float antesY = -1) {
+        if (!nodo) return;
+        Dibujame(window, font, x, y, nodo->val, antesX, antesY);
+
+        dibujarArbol(window, font, nodo->nodes[0], x - espacio, y + 120, espacio / 2, x + 18, y + 20);
+        dibujarArbol(window, font, nodo->nodes[1], x + espacio, y + 120, espacio / 2, x + 18, y + 20);
+    }
+
+    void printD(sf::RenderWindow& window, sf::Font& font) {
+        dibujarArbol(window, font, head, 800, 50);
+    }
+};
+
+int main()
+{
+    sf::RenderWindow window(sf::VideoMode(1600, 700), "Árbol SFML");
+    sf::Font font;
+    if (!font.loadFromFile("C:/Windows/Fonts/arial.ttf")) return -1;
+
+    int A[8] = { 1, 5, 8, 3, 20, 11, 7, 8 };
+    ArbolSuma p;
+    p.Armar(A, A + 8);
+
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
+        }
+
+        window.clear(sf::Color::Black);
+        p.printD(window, font);
+        window.display();
+    }
+
+
+
+}
