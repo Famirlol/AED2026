@@ -1,0 +1,264 @@
+#include <iostream>
+#include <SFML/Graphics.hpp>
+
+struct Node {
+    int id;
+    int val;
+    Node* nodes[2];
+
+    Node(int i, int v) {
+        id = i;
+        val = v;
+        nodes[0] = nullptr;
+        nodes[1] = nullptr;
+    }
+};
+
+// Conversión manual de entero a char[] sin <string>, <cmath> ni <cstring>
+void intAChar(int num, char* str) {
+    if (num == 0) {
+        str[0] = '0';
+        str[1] = '\0';
+        return;
+    }
+    int temp = num;
+    int len = 0;
+    while (temp > 0) {
+        len++;
+        temp /= 10;
+    }
+    str[len] = '\0';
+    for (int i = len - 1; i >= 0; i--) {
+        str[i] = '0' + (num % 10);
+        num /= 10;
+    }
+}
+
+class ArbolDulces {
+    Node* head;
+    int contadorIDs;
+
+    int obtenerBalance(Node* n) {
+        if (!n) return 0;
+        return (n->val - 1) + obtenerBalance(n->nodes[0]) + obtenerBalance(n->nodes[1]);
+    }
+
+public:
+    ArbolDulces() {
+        head = new Node(0, 0); // Nodo Raíz inicial (ID 0)
+        contadorIDs = 1;
+    }
+
+    Node* getHead() { return head; }
+
+    void agregarHijoIzquierdo(Node* padre) {
+        if (padre && !padre->nodes[0]) {
+            padre->nodes[0] = new Node(contadorIDs++, 0);
+        }
+    }
+
+    void agregarHijoDerecho(Node* padre) {
+        if (padre && !padre->nodes[1]) {
+            padre->nodes[1] = new Node(contadorIDs++, 0);
+        }
+    }
+
+    // Busca qué nodo fue clickeado convirtiendo distancias (radio de clic ampliado a 35px)
+    Node* buscarNodoPorClic(Node* nodo, float x, float y, float espacio, float mouseX, float mouseY) {
+        if (!nodo) return nullptr;
+
+        float dx = mouseX - x;
+        float dy = mouseY - y;
+        if ((dx * dx + dy * dy) <= (35.f * 35.f)) {
+            return nodo;
+        }
+
+        Node* izq = buscarNodoPorClic(nodo->nodes[0], x - espacio, y + 110.f, espacio / 1.8f, mouseX, mouseY);
+        if (izq) return izq;
+
+        return buscarNodoPorClic(nodo->nodes[1], x + espacio, y + 110.f, espacio / 1.8f, mouseX, mouseY);
+    }
+
+    // Mueve EXACTAMENTE 1 dulce por llamada
+    bool moverUnDulce(Node* nodo) {
+        if (!nodo) return false;
+
+        if (moverUnDulce(nodo->nodes[0])) return true;
+        if (moverUnDulce(nodo->nodes[1])) return true;
+
+        for (int i = 0; i < 2; ++i) {
+            Node* hijo = nodo->nodes[i];
+            if (!hijo) continue;
+
+            int balanceHijo = obtenerBalance(hijo);
+
+            if (balanceHijo > 0 && hijo->val > 0) {
+                hijo->val--;
+                nodo->val++;
+                return true;
+            }
+
+            if (balanceHijo < 0 && nodo->val > 0) {
+                nodo->val--;
+                hijo->val++;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    void Dibujame(sf::RenderWindow& window, sf::Font& font, float x, float y, Node* nodo, Node* seleccionado, float antesX = -1, float antesY = -1) {
+        if (antesX >= 0) {
+            sf::Vertex line[] = {
+                sf::Vertex(sf::Vector2f(antesX, antesY), sf::Color(180, 180, 180)),
+                sf::Vertex(sf::Vector2f(x, y), sf::Color(180, 180, 180))
+            };
+            window.draw(line, 2, sf::Lines);
+        }
+
+        sf::CircleShape circle(28.f);
+
+        if (nodo == seleccionado) {
+            circle.setOutlineThickness(4.f);
+            circle.setOutlineColor(sf::Color::Yellow);
+        }
+
+        if (nodo->val == 1) {
+            circle.setFillColor(sf::Color(46, 204, 113)); // Verde (Meta)
+        }
+        else if (nodo->val > 1) {
+            circle.setFillColor(sf::Color(230, 126, 34)); // Naranja (Exceso)
+        }
+        else {
+            circle.setFillColor(sf::Color(231, 76, 60));  // Rojo (Falta)
+        }
+
+        circle.setOrigin(28.f, 28.f);
+        circle.setPosition(x, y);
+        window.draw(circle);
+
+        // ID del Nodo (Texto arriba)
+        char bufId[16];
+        intAChar(nodo->id, bufId);
+        sf::Text textId;
+        textId.setFont(font);
+        textId.setString(bufId);
+        textId.setCharacterSize(14);
+        textId.setFillColor(sf::Color(200, 200, 255));
+        sf::FloatRect bId = textId.getLocalBounds();
+        textId.setOrigin(bId.left + bId.width / 2.0f, bId.top + bId.height / 2.0f);
+        textId.setPosition(x, y - 38.f);
+        window.draw(textId);
+
+        // Cantidad de dulces (Texto centro)
+        char bufVal[16];
+        intAChar(nodo->val, bufVal);
+        sf::Text textVal;
+        textVal.setFont(font);
+        textVal.setString(bufVal);
+        textVal.setCharacterSize(22);
+        textVal.setFillColor(sf::Color::White);
+        textVal.setStyle(sf::Text::Bold);
+        sf::FloatRect bVal = textVal.getLocalBounds();
+        textVal.setOrigin(bVal.left + bVal.width / 2.0f, bVal.top + bVal.height / 2.0f);
+        textVal.setPosition(x, y);
+        window.draw(textVal);
+    }
+
+    void dibujarArbol(sf::RenderWindow& window, sf::Font& font, Node* nodo, Node* seleccionado, float x, float y, float espacio = 220.f, float antesX = -1, float antesY = -1) {
+        if (!nodo) return;
+
+        dibujarArbol(window, font, nodo->nodes[0], seleccionado, x - espacio, y + 110, espacio / 1.8f, x, y);
+        dibujarArbol(window, font, nodo->nodes[1], seleccionado, x + espacio, y + 110, espacio / 1.8f, x, y);
+
+        Dibujame(window, font, x, y, nodo, seleccionado, antesX, antesY);
+    }
+
+    void render(sf::RenderWindow& window, sf::Font& font, Node* seleccionado) {
+        dibujarArbol(window, font, head, seleccionado, 800.f, 100.f);
+    }
+};
+
+int main() {
+    sf::RenderWindow window(sf::VideoMode(1600, 750), "Constructor Visual de Arbol y Dulces - SFML");
+    window.setFramerateLimit(60);
+
+    sf::Font font;
+    if (!font.loadFromFile("C:/Windows/Fonts/arial.ttf")) {
+        return -1;
+    }
+
+    ArbolDulces arbol;
+    Node* seleccionado = arbol.getHead();
+    bool modoEdicion = true;
+
+    sf::Text textoGui;
+    textoGui.setFont(font);
+    textoGui.setCharacterSize(18);
+    textoGui.setFillColor(sf::Color::White);
+    textoGui.setPosition(20.f, 20.f);
+
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+            }
+
+            if (modoEdicion) {
+                // Conversión de coordenadas del mouse para que funcione al maximizar la ventana
+                if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+                    sf::Vector2f mouseCoords = window.mapPixelToCoords(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
+                    Node* tocado = arbol.buscarNodoPorClic(arbol.getHead(), 800.f, 100.f, 220.f, mouseCoords.x, mouseCoords.y);
+                    if (tocado) seleccionado = tocado;
+                }
+
+                if (event.type == sf::Event::KeyPressed) {
+                    if (event.key.code == sf::Keyboard::L) {
+                        arbol.agregarHijoIzquierdo(seleccionado);
+                    }
+                    if (event.key.code == sf::Keyboard::D) {
+                        arbol.agregarHijoDerecho(seleccionado);
+                    }
+                    if (event.key.code == sf::Keyboard::Up && seleccionado) {
+                        seleccionado->val++;
+                    }
+                    if (event.key.code == sf::Keyboard::Down && seleccionado && seleccionado->val > 0) {
+                        seleccionado->val--;
+                    }
+                    if (event.key.code == sf::Keyboard::Return) {
+                        modoEdicion = false;
+                        seleccionado = nullptr;
+                    }
+                }
+            }
+            else {
+                if (event.type == sf::Event::KeyPressed) {
+                    if (event.key.code == sf::Keyboard::Space || event.key.code == sf::Keyboard::R) {
+                        arbol.moverUnDulce(arbol.getHead());
+                    }
+                    if (event.key.code == sf::Keyboard::BackSpace) {
+                        modoEdicion = true;
+                        seleccionado = arbol.getHead();
+                    }
+                }
+            }
+        }
+
+        window.clear(sf::Color(30, 30, 30));
+
+        if (modoEdicion) {
+            textoGui.setString("[MODO EDICION VISUAL]\n- Clic en nodo para Seleccionar\n- Tecla L: Agregar Hijo Izquierdo\n- Tecla D: Agregar Hijo Derecho\n- Flechas Arriba/Abajo: Modificar Dulces\n- ENTER: Comenzar Reparto");
+        }
+        else {
+            textoGui.setString("[MODO REPARTO]\n- ESPACIO / R: Mover 1 dulce paso a paso\n- BACKSPACE: Volver a Editar");
+        }
+
+        window.draw(textoGui);
+        arbol.render(window, font, seleccionado);
+        window.display();
+    }
+
+    return 0;
+}
