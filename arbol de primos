@@ -1,0 +1,292 @@
+#include <SFML/Graphics.hpp>
+#include <iostream>
+#include <queue>
+#include <string>
+
+struct Node {
+    int   val;
+    Node* left;
+    Node* right;
+    int   altura;
+
+    int   estado; 
+
+    float cx;
+    float cy;
+
+    Node(int x) {
+        val = x;
+        left = nullptr;
+        right = nullptr;
+        altura = 1;
+        estado = 0;
+        cx = 0;
+        cy = 0;
+    }
+};
+
+class AVL {
+    Node* root;
+public:
+    AVL() {
+        root = nullptr;
+    }
+
+
+    Node* getRoot() { return root; }
+
+    int altura(Node* n) {
+        if (!n) return 0;
+        return n->altura;
+    }
+
+    int peso(Node* n) { return altura(n->left) - altura(n->right); }
+
+    void actualizar(Node* n) {
+        n->altura = 1 + std::max(altura(n->left), altura(n->right));
+    }
+
+    Node* menorValor(Node* n) {
+        Node* p = n;
+        while (p->right) { p = p->right; }
+        return p;
+    }
+
+    Node* Derecha(Node* n) {
+        Node* p = n->left;
+        Node* q = p->right;
+        p->right = n;
+        n->left = q;
+        actualizar(n);
+        actualizar(p);
+        return p;
+    }
+
+    Node* Izquierda(Node* n) {
+        Node* p = n->right;
+        Node* q = p->left;
+        p->left = n;
+        n->right = q;
+        actualizar(n);
+        actualizar(p);
+        return p;
+    }
+
+    Node* RecIns(Node* n, int v) {
+        if (n == nullptr) { return new Node(v); }
+        else if (v < n->val) { n->left = RecIns(n->left, v); }
+        else if (v > n->val) { n->right = RecIns(n->right, v); }
+        else { return n; }
+
+        actualizar(n);
+
+        int p = peso(n);
+
+        if (p > 1 && v < n->left->val) return Derecha(n);
+        if (p < -1 && v > n->right->val) return Izquierda(n);
+
+        if (p > 1 && v > n->left->val) {
+            n->left = Izquierda(n->left);
+            return Derecha(n);
+        }
+
+        if (p < -1 && v < n->right->val) {
+            n->right = Derecha(n->right);
+            return Izquierda(n);
+        }
+        return n;
+    }
+
+    void insert(int dato) { root = RecIns(root, dato); }
+
+    int find(int v, Node*& padre) {
+        int cont = 1;
+        Node* p = root;
+        padre = nullptr;
+        while (p && p->val != v) {
+            if (v < p->val) {
+                padre = p;
+                p = p->left;
+            }
+            else {
+                padre = p;
+                p = p->right;
+            }
+            cont++;
+        }
+        if (!p) { return -1; }
+        return cont;
+    }
+
+    void resetSeleccion(Node* n) {
+        if (!n) return;
+        n->estado = 0; 
+        resetSeleccion(n->left);
+        resetSeleccion(n->right);
+    }
+
+    void limpiarSeleccion() {
+        resetSeleccion(root);
+    }
+
+
+    void Primos(Node* target) {
+        limpiarSeleccion();
+        if (!target) return;
+
+        target->estado = 1; 
+
+        Node* padre;
+        int i = find(target->val, padre);
+
+        if (i > 2) { 
+            std::queue<std::pair<int, Node*>> q;
+            q.push(std::make_pair(1, root));
+
+            while (!q.empty() && q.front().first != i) {
+                if (q.front().second->left) { q.push(std::make_pair(q.front().first + 1, q.front().second->left)); }
+                if (q.front().second->right) { q.push(std::make_pair(q.front().first + 1, q.front().second->right)); }
+                q.pop();
+            }
+
+            while (!q.empty()) {
+
+                if (q.front().second != padre->left && q.front().second != padre->right) {
+                    q.front().second->estado = 2; 
+                }
+                q.pop();
+            }
+        }
+    }
+
+    Node* clickNodo(Node* n, float mx, float my) {
+        if (!n) return nullptr;
+
+        float dx = n->cx - mx;
+        float dy = n->cy - my;
+        if (dx * dx + dy * dy <= 28 * 28) return n;
+
+        Node* izq = clickNodo(n->left, mx, my);
+        if (izq) return izq;
+
+        return clickNodo(n->right, mx, my);
+    }
+
+    
+
+    void Dibujame(sf::RenderWindow& window, sf::Font& font, Node* n, float x, float y, float antesX = -1, float antesY = -1) {
+        std::string mensaje = std::to_string(n->val);
+
+        if (antesX >= 0) {
+            sf::Vertex line[] = {
+                sf::Vertex(sf::Vector2f(antesX, antesY), sf::Color::White),
+                sf::Vertex(sf::Vector2f(x, y), sf::Color::White)
+            };
+            window.draw(line, 2, sf::Lines);
+        }
+
+        sf::CircleShape circle(28.f);
+
+
+        if (n->estado == 1) {
+            circle.setFillColor(sf::Color(255, 215, 0)); 
+        }
+        else if (n->estado == 2) {
+            circle.setFillColor(sf::Color(200, 130, 180)); 
+        }
+        else {
+            circle.setFillColor(sf::Color(163, 192, 207)); 
+        }
+
+        circle.setOrigin(30.f, 30.f);
+        circle.setPosition(x + 18, y + 20);
+
+        n->cx = x + 18;
+        n->cy = y + 20;
+
+        window.draw(circle);
+
+        sf::Text text;
+        text.setFont(font);
+        text.setString(mensaje);
+        text.setCharacterSize(28);
+        text.setFillColor(sf::Color::Black);
+        text.setStyle(sf::Text::Bold);
+        text.setPosition(x, y);
+
+        window.draw(text);
+    }
+
+    void dibujarArbol(sf::RenderWindow& window, sf::Font& font, Node* nodo, float x, float y, float espacio = 400.f, float antesX = -1, float antesY = -1) {
+        if (!nodo) return;
+        Dibujame(window, font, nodo, x, y, antesX, antesY);
+
+        dibujarArbol(window, font, nodo->left, x - espacio, y + 120, espacio / 2, x + 18, y + 20);
+        dibujarArbol(window, font, nodo->right, x + espacio, y + 120, espacio / 2, x + 18, y + 20);
+    }
+
+    void print2(sf::RenderWindow& window, sf::Font& font) {
+        dibujarArbol(window, font, root, 800, 100);
+    }
+};
+
+int main() {
+    sf::RenderWindow window(sf::VideoMode(1600, 700), "Árbol AVL Interactivo");
+    sf::Font font;
+    if (!font.loadFromFile("C:/Windows/Fonts/arial.ttf")) return -1;
+
+    AVL t;
+    std::string inputText = "";
+
+    sf::Text uiText;
+    uiText.setFont(font);
+    uiText.setCharacterSize(24);
+    uiText.setFillColor(sf::Color::White);
+    uiText.setPosition(20, 20);
+
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
+
+            if (event.type == sf::Event::TextEntered) {
+                if (event.text.unicode >= '0' && event.text.unicode <= '9') {
+                    inputText += static_cast<char>(event.text.unicode);
+                }
+                else if (event.text.unicode == 8 && !inputText.empty()) {
+                    inputText.pop_back();
+                }
+                else if (event.text.unicode == 13 && !inputText.empty()) {
+                    t.insert(std::stoi(inputText));
+                    inputText.clear();
+                }
+            }
+
+            if (event.type == sf::Event::MouseButtonPressed) {
+                if (event.mouseButton.button == sf::Mouse::Left) {
+                    
+                    sf::Vector2i pixelPos(event.mouseButton.x, event.mouseButton.y);
+                    sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos);
+
+                    Node* clickeado = t.clickNodo(t.getRoot(), worldPos.x, worldPos.y);
+                    if (clickeado != nullptr) {
+                        t.Primos(clickeado); 
+                    }
+                    else {
+                        t.limpiarSeleccion(); 
+                    }
+                }
+            }
+        }
+
+        uiText.setString("Escribe un numero y presiona ENTER para insertarlo: " + inputText + "\n(Haz CLIC sobre un nodo para ver sus primos)");
+
+        window.clear(sf::Color::Black);
+        window.draw(uiText);
+        t.print2(window, font);
+        window.display();
+    }
+
+    return 0;
+}
