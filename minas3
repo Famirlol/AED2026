@@ -1,0 +1,253 @@
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+#include <ctime>
+
+template<class T>
+class SparseMatrix;
+template<class T>
+struct obj;
+
+template <class T>
+struct Node {
+    T data;
+    int x;
+    int y;
+    Node<T>* right;
+    Node<T>* botom;
+
+    Node(T val, int x_, int y_) {
+        data = val;
+        x = x_;
+        y = y_;
+
+        right = 0;
+        botom = 0;
+    }
+};
+
+template <class T>
+class SparseMatrix {
+public:
+    int tam_Columnas;
+    int tam_Filas;
+
+    Node<T>** fila;
+    Node<T>** columna;
+
+    SparseMatrix(int fil, int col) {
+        tam_Filas = fil;
+        tam_Columnas = col;
+        fila = new Node<T>*[tam_Filas];
+        columna = new Node<T>*[tam_Columnas];
+
+        for (int i = 0; i < tam_Filas; i++) {
+            fila[i] = nullptr;
+        }
+
+        for (int i = 0; i < tam_Columnas; i++) {
+            columna[i] = nullptr;
+        }
+    }
+
+    ~SparseMatrix() {
+        for (int i = 0; i < tam_Filas; i++) {
+            Node<T>* actual = fila[i];
+            while (actual != nullptr) {
+                Node<T>* temp = actual;
+                actual = actual->right;
+                delete temp;
+            }
+        }
+        delete[] fila;
+        delete[] columna;
+    }
+
+    bool find_Botom(int fil, int col, Node<T>**& p) {
+        if (fil >= tam_Filas || col >= tam_Columnas || fil < 0 || col < 0) { return 1; }
+        p = &columna[col];
+        for (; (*p) && (*p)->x < fil; p = &((*p)->botom));
+
+        return ((*p) && ((*p)->x == fil) && ((*p)->y == col));
+    }
+
+    bool find_Rigth(int fil, int col, Node<T>**& p) {
+        if (fil >= tam_Filas || col >= tam_Columnas || fil < 0 || col < 0) { return 1; }
+        p = &fila[fil];
+        for (; (*p) && (*p)->y < col; p = &((*p)->right));
+
+        return ((*p) && ((*p)->x == fil) && ((*p)->y == col));
+    }
+
+    void set(T val, int fil, int col) {
+        if (fil >= tam_Filas || col >= tam_Columnas || fil < 0 || col < 0) { return; }
+
+        Node<T>** p;
+        Node<T>** q;
+
+        bool fb = find_Botom(fil, col, p);
+        bool fr = find_Rigth(fil, col, q);
+
+        if (fb && fr) {
+            if (val != 0) {
+                (*p)->data = val;
+            } else {
+                Node<T>* t = *p;
+                *p = t->botom;
+                *q = t->right;
+                delete t;
+            }
+        } else if (val != 0) {
+            Node<T>* t = new Node<T>(val, fil, col);
+            t->botom = *p;
+            *p = t;
+            t->right = *q;
+            *q = t;
+        }
+    }
+
+    T get(int fil, int col) {
+        if (fil >= tam_Filas || col >= tam_Columnas || fil < 0 || col < 0) { return 0; }
+
+        Node<T>** p;
+        Node<T>** q;
+
+        bool fb = find_Botom(fil, col, p);
+        bool fr = find_Rigth(fil, col, q);
+
+        if (!(fb && fr)) { return 0; }
+        else {
+            return (*p)->data;
+        }
+    }
+
+    bool findDefinitivo(int fil, int col) {
+        Node<T>** p;
+        Node<T>** q;
+
+        bool fb = find_Botom(fil, col, p);
+        bool fr = find_Rigth(fil, col, q);
+
+        return fb && fr;
+    }
+
+    bool vericaTodo(int fil, int col) {
+        if (findDefinitivo(fil, col)) { return 1; }
+        return 0;
+    }
+
+    void rellenaEspacios(int fil, int col) {
+        for (int a = 0; a < tam_Columnas; a++) {
+            set(1, fil, a);
+            set(1, a, col);
+        }
+
+        set(1, fil - 1, col - 1);
+        set(1, fil - 1, col + 1);
+        set(1, fil + 1, col - 1);
+        set(1, fil + 1, col + 1);
+        set(1, fil, col);
+    }
+
+    void print() {
+        for (int i = 0; i < tam_Filas; i++) {
+            for (int j = 0; j < tam_Columnas; j++) {
+                std::cout << get(i, j) << "\t";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;
+    }
+
+    obj<T> operator()(int fil, int col);
+};
+
+template <class T>
+struct obj {
+    SparseMatrix<T>* s;
+    int x;
+    int y;
+
+    obj(SparseMatrix<T>* s_ = nullptr) : s(s_) {}
+
+    obj<T> operator=(T v) {
+        s->set(v, x, y);
+        return *this;
+    }
+
+    obj<T> operator=(obj<T>& otro) {
+        s->set(otro.s->get(otro.x, otro.y), x, y);
+        return *this;
+    }
+
+    operator T() {
+        return s->get(x, y);
+    }
+};
+
+template <class T>
+obj<T> SparseMatrix<T>::operator()(int fil, int col) {
+    obj<T> ox(this);
+    ox.x = fil;
+    ox.y = col;
+    return ox;
+}
+
+void generarAleatorios(int& fil, int& col, int n) {
+    fil = rand() % n;
+    col = rand() % n;
+}
+
+void buscaMinasPeroNoJugamosSoloPonemosMinas(int n_fil, int n_col, int cantidadBombas) {
+    SparseMatrix<int> tablero(n_fil, n_col);
+    SparseMatrix<int> tableroDeControl(n_fil, n_col);
+
+    if (cantidadBombas <= 0 || n_fil <= 0) {
+        tablero.print();
+        return;
+    }
+
+    int fil;
+    int col;
+    int bombas = cantidadBombas;
+    int colocadas = 0;
+
+    generarAleatorios(fil, col, n_fil);
+
+    tablero.set(1, fil, col);
+    tableroDeControl.rellenaEspacios(fil, col);
+    bombas--;
+    colocadas++;
+
+    int intentos = 0;
+    int maxIntentos = n_fil * n_col * 150;
+
+    while (bombas != 0 && intentos < maxIntentos) {
+        intentos++;
+        generarAleatorios(fil, col, n_fil);
+        if (tableroDeControl.vericaTodo(fil, col)) {
+            continue;
+        } else {
+            tablero.set(1, fil, col);
+            tableroDeControl.rellenaEspacios(fil, col);
+            bombas = bombas - 1;
+            colocadas++;
+        }
+    }
+
+    std::cout << "\nTablero " << n_fil << "x" << n_col << " | Minas pedidas: " << cantidadBombas << " | Minas colocadas: " << colocadas << "\n\n";
+    tablero.print();
+}
+
+int main() {
+    srand(time(0));
+
+    int minas;
+
+    std::cout << "Ingrese la cantidad de minas: ";
+    std::cin >> minas;
+
+    buscaMinasPeroNoJugamosSoloPonemosMinas(minas, minas, minas);
+
+    return 0;
+}
