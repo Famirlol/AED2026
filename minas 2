@@ -1,0 +1,524 @@
+#include <SFML/Graphics.hpp>
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+#include <ctime>
+
+template<class T>
+class SparseMatrix;
+template<class T>
+struct obj;
+
+template <class T>
+struct Node {
+    T data;
+    int x;
+    int y;
+    Node<T>* right;
+    Node<T>* botom;
+
+    Node(T val, int x_, int y_) {
+        data = val;
+        x = x_;
+        y = y_;
+
+        right = 0;
+        botom = 0;
+    }
+};
+
+template <class T>
+class SparseMatrix {
+public:
+    int tam_Columnas;
+    int tam_Filas;
+
+    Node<T>** fila;
+    Node<T>** columna;
+
+    SparseMatrix(int fil, int col) {
+        tam_Filas = fil;
+        tam_Columnas = col;
+        fila = new Node<T>*[tam_Filas];
+        columna = new Node<T>*[tam_Columnas];
+
+        for (int i = 0; i < tam_Filas; i++) {
+            fila[i] = nullptr;
+        }
+
+        for (int i = 0; i < tam_Columnas; i++) {
+            columna[i] = nullptr;
+        }
+    }
+
+    ~SparseMatrix() {
+        for (int i = 0; i < tam_Filas; i++) {
+            Node<T>* actual = fila[i];
+            while (actual != nullptr) {
+                Node<T>* temp = actual;
+                actual = actual->right;
+                delete temp;
+            }
+        }
+        delete[] fila;
+        delete[] columna;
+    }
+
+    bool find_Botom(int fil, int col, Node<T>**& p) {
+        if (fil >= tam_Filas || col >= tam_Columnas || fil < 0 || col < 0) { return 1; }
+        p = &columna[col];
+        for (; (*p) && (*p)->x < fil; p = &((*p)->botom));
+
+        return ((*p) && ((*p)->x == fil) && ((*p)->y == col));
+    }
+
+    bool find_Rigth(int fil, int col, Node<T>**& p) {
+        if (fil >= tam_Filas || col >= tam_Columnas || fil < 0 || col < 0) { return 1; }
+        p = &fila[fil];
+        for (; (*p) && (*p)->y < col; p = &((*p)->right));
+
+        return ((*p) && ((*p)->x == fil) && ((*p)->y == col));
+    }
+
+    void set(T val, int fil, int col) {
+        if (fil >= tam_Filas || col >= tam_Columnas || fil < 0 || col < 0) { return; }
+
+        Node<T>** p;
+        Node<T>** q;
+
+        bool fb = find_Botom(fil, col, p);
+        bool fr = find_Rigth(fil, col, q);
+
+        if (fb && fr) {
+            if (val != 0) {
+                (*p)->data = val;
+            } else {
+                Node<T>* t = *p;
+                *p = t->botom;
+                *q = t->right;
+                delete t;
+            }
+        } else if (val != 0) {
+            Node<T>* t = new Node<T>(val, fil, col);
+            t->botom = *p;
+            *p = t;
+            t->right = *q;
+            *q = t;
+        }
+    }
+
+    T get(int fil, int col) {
+        if (fil >= tam_Filas || col >= tam_Columnas || fil < 0 || col < 0) { return 0; }
+
+        Node<T>** p;
+        Node<T>** q;
+
+        bool fb = find_Botom(fil, col, p);
+        bool fr = find_Rigth(fil, col, q);
+
+        if (!(fb && fr)) { return 0; }
+        else {
+            return (*p)->data;
+        }
+    }
+
+    bool findDefinitivo(int fil, int col) {
+        Node<T>** p;
+        Node<T>** q;
+
+        bool fb = find_Botom(fil, col, p);
+        bool fr = find_Rigth(fil, col, q);
+
+        return fb && fr;
+    }
+
+    bool vericaTodo(int fil, int col) {
+        if (findDefinitivo(fil, col)) { return 1; }
+        return 0;
+    }
+
+    void rellenaEspacios(int fil, int col) {
+        for (int a = 0; a < tam_Columnas; a++) {
+            set(1, fil, a);
+            set(1, a, col);
+        }
+
+        set(1, fil - 1, col - 1);
+        set(1, fil - 1, col + 1);
+        set(1, fil + 1, col - 1);
+        set(1, fil + 1, col + 1);
+        set(1, fil, col);
+    }
+
+    void print() {
+        for (int i = 0; i < tam_Filas; i++) {
+            for (int j = 0; j < tam_Columnas; j++) {
+                std::cout << get(i, j) << "\t";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;
+    }
+
+    obj<T> operator()(int fil, int col);
+};
+
+template <class T>
+struct obj {
+    SparseMatrix<T>* s;
+    int x;
+    int y;
+
+    obj(SparseMatrix<T>* s_ = nullptr) : s(s_) {}
+
+    obj<T> operator=(T v) {
+        s->set(v, x, y);
+        return *this;
+    }
+
+    obj<T> operator=(obj<T>& otro) {
+        s->set(otro.s->get(otro.x, otro.y), x, y);
+        return *this;
+    }
+
+    operator T() {
+        return s->get(x, y);
+    }
+};
+
+template <class T>
+obj<T> SparseMatrix<T>::operator()(int fil, int col) {
+    obj<T> ox(this);
+    ox.x = fil;
+    ox.y = col;
+    return ox;
+}
+
+void generarAleatorios(int& fil, int& col, int n) {
+    fil = rand() % n;
+    col = rand() % n;
+}
+
+int buscaMinasPeroNoJugamosSoloPonemosMinas(SparseMatrix<int>*& tablero, SparseMatrix<int>*& tableroDeControl, int n_fil, int n_col, int cantidadBombas) {
+    if (tablero != nullptr) delete tablero;
+    if (tableroDeControl != nullptr) delete tableroDeControl;
+
+    tablero = new SparseMatrix<int>(n_fil, n_col);
+    tableroDeControl = new SparseMatrix<int>(n_fil, n_col);
+
+    if (cantidadBombas <= 0 || n_fil <= 0) return 0;
+
+    int fil;
+    int col;
+    int bombas = cantidadBombas;
+    int colocadas = 0;
+
+    generarAleatorios(fil, col, n_fil);
+
+    tablero->set(1, fil, col);
+    tableroDeControl->rellenaEspacios(fil, col);
+    bombas--;
+    colocadas++;
+
+    int intentos = 0;
+    int maxIntentos = n_fil * n_col * 150;
+
+    while (bombas != 0 && intentos < maxIntentos) {
+        intentos++;
+        generarAleatorios(fil, col, n_fil);
+        if (tableroDeControl->vericaTodo(fil, col)) {
+            continue;
+        } else {
+            tablero->set(1, fil, col);
+            tableroDeControl->rellenaEspacios(fil, col);
+            bombas = bombas - 1;
+            colocadas++;
+        }
+    }
+
+    tablero->print();
+    return colocadas;
+}
+
+void dibujarDigito(sf::RenderWindow& window, char d, float x, float y, float w, float h, sf::Color color) {
+    const bool seg[10][7] = {
+        {1,1,1,0,1,1,1},
+        {0,0,1,0,0,1,0},
+        {1,0,1,1,1,0,1},
+        {1,0,1,1,0,1,1},
+        {0,1,1,1,0,1,0},
+        {1,1,0,1,0,1,1},
+        {1,1,0,1,1,1,1},
+        {1,0,1,0,0,1,0},
+        {1,1,1,1,1,1,1},
+        {1,1,1,1,0,1,1}
+    };
+
+    int idx = d - '0';
+    if (idx < 0 || idx > 9) return;
+
+    float t = 3.5f;
+    float halfH = h / 2.f;
+
+    auto trazar = [&](float px, float py, float sw, float sh) {
+        sf::RectangleShape r(sf::Vector2f(sw, sh));
+        r.setPosition(px, py);
+        r.setFillColor(color);
+        window.draw(r);
+    };
+
+    if (seg[idx][0]) trazar(x, y, w, t);
+    if (seg[idx][1]) trazar(x, y, t, halfH);
+    if (seg[idx][2]) trazar(x + w - t, y, t, halfH);
+    if (seg[idx][3]) trazar(x, y + halfH - t / 2.f, w, t);
+    if (seg[idx][4]) trazar(x, y + halfH, t, halfH);
+    if (seg[idx][5]) trazar(x + w - t, y + halfH, t, halfH);
+    if (seg[idx][6]) trazar(x, y + h - t, w, t);
+}
+
+void dibujarTextoNumerico(sf::RenderWindow& window, const std::string& texto, float startX, float startY, float charW, float charH, sf::Color color, bool mostrarCursor) {
+    float espaciado = charW + 8.f;
+    for (size_t i = 0; i < texto.size(); i++) {
+        dibujarDigito(window, texto[i], startX + i * espaciado, startY, charW, charH, color);
+    }
+    if (mostrarCursor) {
+        sf::RectangleShape cursor(sf::Vector2f(2.5f, charH + 4.f));
+        cursor.setPosition(startX + texto.size() * espaciado + 2.f, startY - 2.f);
+        cursor.setFillColor(sf::Color::White);
+        window.draw(cursor);
+    }
+}
+
+int convertirAEntero(const std::string& s, int defecto) {
+    if (s.empty()) return defecto;
+    int val = 0;
+    for (size_t i = 0; i < s.size(); i++) {
+        val = val * 10 + (s[i] - '0');
+    }
+    return val;
+}
+
+int main() {
+    srand(time(0));
+
+    const float ALTO_PANEL = 110.f;
+
+    sf::RenderWindow window(sf::VideoMode(720, 840), "SparseMatrix Buscaminas");
+    window.setFramerateLimit(60);
+
+    std::string inputTamano = "9";
+    std::string inputMinas = "8";
+    int campoActivo = 1;
+
+    int n = 9;
+    int minasPedidas = 8;
+    bool verBloqueos = false;
+
+    SparseMatrix<int>* tablero = nullptr;
+    SparseMatrix<int>* tableroDeControl = nullptr;
+    int minasColocadas = buscaMinasPeroNoJugamosSoloPonemosMinas(tablero, tableroDeControl, n, n, minasPedidas);
+
+    auto actualizarTitulo = [&]() {
+        window.setTitle("Matriz: " + std::to_string(n) + "x" + std::to_string(n) +
+                        " | Minas pedidas: " + std::to_string(minasPedidas) +
+                        " | Colocadas: " + std::to_string(minasColocadas) +
+                        "  [Click en recuadros para escribir, ENTER para correr, B para ver bloqueos]");
+    };
+    actualizarTitulo();
+
+    auto ejecutarGeneracion = [&]() {
+        int nuevoN = convertirAEntero(inputTamano, 9);
+        if (nuevoN < 2) nuevoN = 2;
+        if (nuevoN > 40) nuevoN = 40;
+
+        int nuevasMinas = convertirAEntero(inputMinas, 1);
+        if (nuevasMinas < 0) nuevasMinas = 0;
+        if (nuevasMinas > nuevoN) nuevasMinas = nuevoN;
+
+        n = nuevoN;
+        minasPedidas = nuevasMinas;
+        inputTamano = std::to_string(n);
+        inputMinas = std::to_string(minasPedidas);
+
+        minasColocadas = buscaMinasPeroNoJugamosSoloPonemosMinas(tablero, tableroDeControl, n, n, minasPedidas);
+        actualizarTitulo();
+    };
+
+    sf::Clock relojCursor;
+
+    while (window.isOpen()) {
+        float anchoActual = (float)window.getSize().x;
+        float altoActual = (float)window.getSize().y;
+
+        float anchoTotalControles = 640.f;
+        float inicioX = (anchoActual - anchoTotalControles) / 2.f;
+        if (inicioX < 15.f) inicioX = 15.f;
+
+        sf::FloatRect cajaTamano(inicioX, 25.f, 220.f, 60.f);
+        sf::FloatRect cajaMinas(inicioX + 250.f, 25.f, 220.f, 60.f);
+        sf::FloatRect btnCorrer(inicioX + 500.f, 25.f, 120.f, 60.f);
+
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+            }
+
+            if (event.type == sf::Event::Resized) {
+                sf::FloatRect visibleArea(0.f, 0.f, (float)event.size.width, (float)event.size.height);
+                window.setView(sf::View(visibleArea));
+            }
+
+            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+                sf::Vector2f mousePos((float)event.mouseButton.x, (float)event.mouseButton.y);
+
+                if (cajaTamano.contains(mousePos)) {
+                    campoActivo = 1;
+                } else if (cajaMinas.contains(mousePos)) {
+                    campoActivo = 2;
+                } else if (btnCorrer.contains(mousePos)) {
+                    campoActivo = 0;
+                    ejecutarGeneracion();
+                } else {
+                    campoActivo = 0;
+                }
+            }
+
+            if (event.type == sf::Event::TextEntered && campoActivo != 0) {
+                sf::Uint32 unicode = event.text.unicode;
+                std::string& destino = (campoActivo == 1) ? inputTamano : inputMinas;
+
+                if (unicode >= '0' && unicode <= '9') {
+                    if (destino.size() < 2) {
+                        if (destino == "0") destino.clear();
+                        destino += static_cast<char>(unicode);
+                    }
+                } else if (unicode == 8) {
+                    if (!destino.empty()) {
+                        destino.pop_back();
+                    }
+                }
+            }
+
+            if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Return) {
+                    ejecutarGeneracion();
+                } else if (event.key.code == sf::Keyboard::Tab) {
+                    campoActivo = (campoActivo == 1) ? 2 : 1;
+                } else if (event.key.code == sf::Keyboard::B) {
+                    verBloqueos = !verBloqueos;
+                }
+            }
+        }
+
+        window.clear(sf::Color(30, 32, 38));
+
+        sf::RectangleShape panel(sf::Vector2f(anchoActual, ALTO_PANEL));
+        panel.setFillColor(sf::Color(42, 45, 54));
+        window.draw(panel);
+
+        bool parpadeo = ((int)(relojCursor.getElapsedTime().asSeconds() * 2.f) % 2 == 0);
+
+        sf::RectangleShape rectCaja1(sf::Vector2f(cajaTamano.width, cajaTamano.height));
+        rectCaja1.setPosition(cajaTamano.left, cajaTamano.top);
+        rectCaja1.setFillColor(sf::Color(24, 26, 32));
+        rectCaja1.setOutlineThickness(3.f);
+        rectCaja1.setOutlineColor(campoActivo == 1 ? sf::Color(70, 170, 255) : sf::Color(75, 80, 95));
+        window.draw(rectCaja1);
+
+        for (int r = 0; r < 3; r++) {
+            for (int c = 0; c < 3; c++) {
+                sf::RectangleShape miniCelda(sf::Vector2f(8.f, 8.f));
+                miniCelda.setPosition(cajaTamano.left + 16.f + c * 11.f, cajaTamano.top + 15.f + r * 11.f);
+                miniCelda.setFillColor(sf::Color(70, 170, 255));
+                window.draw(miniCelda);
+            }
+        }
+
+        dibujarTextoNumerico(window, inputTamano, cajaTamano.left + 75.f, cajaTamano.top + 14.f, 18.f, 32.f,
+                             sf::Color::White, (campoActivo == 1 && parpadeo));
+
+        sf::RectangleShape rectCaja2(sf::Vector2f(cajaMinas.width, cajaMinas.height));
+        rectCaja2.setPosition(cajaMinas.left, cajaMinas.top);
+        rectCaja2.setFillColor(sf::Color(24, 26, 32));
+        rectCaja2.setOutlineThickness(3.f);
+        rectCaja2.setOutlineColor(campoActivo == 2 ? sf::Color(240, 80, 80) : sf::Color(75, 80, 95));
+        window.draw(rectCaja2);
+
+        sf::CircleShape iconoMina(14.f);
+        iconoMina.setPosition(cajaMinas.left + 18.f, cajaMinas.top + 16.f);
+        iconoMina.setFillColor(sf::Color(235, 65, 65));
+        iconoMina.setOutlineThickness(2.f);
+        iconoMina.setOutlineColor(sf::Color(255, 190, 190));
+        window.draw(iconoMina);
+
+        dibujarTextoNumerico(window, inputMinas, cajaMinas.left + 75.f, cajaMinas.top + 14.f, 18.f, 32.f,
+                             sf::Color::White, (campoActivo == 2 && parpadeo));
+
+        sf::RectangleShape rectBtn(sf::Vector2f(btnCorrer.width, btnCorrer.height));
+        rectBtn.setPosition(btnCorrer.left, btnCorrer.top);
+        rectBtn.setFillColor(sf::Color(46, 165, 85));
+        rectBtn.setOutlineThickness(2.f);
+        rectBtn.setOutlineColor(sf::Color(90, 210, 125));
+        window.draw(rectBtn);
+
+        sf::CircleShape trianguloPlay(16.f, 3);
+        trianguloPlay.setOrigin(16.f, 16.f);
+        trianguloPlay.setRotation(90.f);
+        trianguloPlay.setPosition(btnCorrer.left + btnCorrer.width / 2.f, btnCorrer.top + btnCorrer.height / 2.f);
+        trianguloPlay.setFillColor(sf::Color::White);
+        window.draw(trianguloPlay);
+
+        float margen = 20.f;
+        float altoTablero = altoActual - ALTO_PANEL;
+        if (altoTablero < 100.f) altoTablero = 100.f;
+
+        float ladoMenor = (anchoActual < altoTablero) ? anchoActual : altoTablero;
+        float areaDisponible = ladoMenor - (margen * 2.f);
+        if (areaDisponible < 50.f) areaDisponible = 50.f;
+
+        float tamCelda = areaDisponible / (float)n;
+        float offsetX = (anchoActual - (tamCelda * n)) / 2.f;
+        float offsetY = ALTO_PANEL + (altoTablero - (tamCelda * n)) / 2.f;
+
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                float grosorBorde = (tamCelda < 18.f) ? 1.f : 2.f;
+                sf::RectangleShape celda(sf::Vector2f(tamCelda - grosorBorde, tamCelda - grosorBorde));
+                celda.setPosition(offsetX + j * tamCelda, offsetY + i * tamCelda);
+
+                bool hayMina = (tablero->get(i, j) == 1);
+                bool bloqueado = (tableroDeControl->get(i, j) == 1);
+
+                if (hayMina) {
+                    celda.setFillColor(sf::Color(55, 60, 72));
+                } else if (verBloqueos && bloqueado) {
+                    celda.setFillColor(sf::Color(75, 45, 50));
+                } else {
+                    celda.setFillColor(((i + j) % 2 == 0) ? sf::Color(48, 52, 62) : sf::Color(42, 46, 55));
+                }
+
+                window.draw(celda);
+
+                if (hayMina) {
+                    float radio = tamCelda * 0.30f;
+                    sf::CircleShape mina(radio);
+                    mina.setOrigin(radio, radio);
+                    mina.setPosition(offsetX + j * tamCelda + tamCelda / 2.f - grosorBorde / 2.f,
+                                     offsetY + i * tamCelda + tamCelda / 2.f - grosorBorde / 2.f);
+                    mina.setFillColor(sf::Color(235, 65, 65));
+                    mina.setOutlineThickness(tamCelda < 18.f ? 1.f : 2.f);
+                    mina.setOutlineColor(sf::Color(255, 190, 190));
+                    window.draw(mina);
+                }
+            }
+        }
+
+        window.display();
+    }
+
+    delete tablero;
+    delete tableroDeControl;
+
+    return 0;
+}
